@@ -30,9 +30,10 @@ pins a behaviour where one applies.
 
 It holds no language code yet. The web app, and this file's rules for it
 (Node version, formatting, generated files, `package-lock.json`), arrive
-with those-who-run/paddock#120. The Go API's code and rules come from the
-`chassis` template (those-who-run/paddock#21, those-who-run/paddock#22)
-with those-who-run/paddock#124.
+with those-who-run/paddock#120. So do the Go module skeleton (`go.mod`,
+`cmd/pitwall/`) and the template's Go CI and rules, from the `chassis`
+template (those-who-run/paddock#21, those-who-run/paddock#22).
+those-who-run/paddock#124 builds the Go API on that skeleton.
 
 ## Make targets
 

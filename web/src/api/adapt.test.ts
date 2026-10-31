@@ -79,7 +79,7 @@ describe("the adapter on contracts' examples", () => {
   const SUZUKA: Session = {
     session_id: "01JB9QZ4V3X8M2K7T5R1N6PDWA",
     title: "Suzuka Circuit East Course · 6-lap race",
-    result: "Finished P1 of 2 in 6:29.934",
+    result: "🚩 Finished P1 of 2 in 6:29.934",
     started_at: Date.parse("2026-10-18T13:21:29.015Z") / 1000,
     ended_at: Date.parse("2026-10-18T13:28:01.176Z") / 1000,
     closed: true,
@@ -116,8 +116,7 @@ describe("the adapter on contracts' examples", () => {
 
   it("maps GetSession's", () => {
     const got = adapt.session((JSON.parse(sessionExample) as GetSessionResponseJson).session!);
-    expect({ ...got, result: SUZUKA.result }).toEqual(SUZUKA);
-    expect(got.result).toMatch(/Finished P1 of 2 in 6:29\.934$/);
+    expect(got).toEqual(SUZUKA);
   });
 
   it("maps ListSessions', its options included", () => {

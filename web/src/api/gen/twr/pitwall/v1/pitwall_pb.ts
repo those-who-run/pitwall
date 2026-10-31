@@ -44,8 +44,9 @@ export type Track = Message<"twr.pitwall.v1.Track"> & {
   trackId?: number | undefined;
 
   /**
-   * The name to show: "Unknown track" when the detector is not sure (v1's
-   * `name`).
+   * The name to show (format.TrackLabel): the layout's name when the
+   * detector is sure, else the circuit's when only that is known, such as
+   * "Fuji", else "Unknown track" (v1's `name`). The track filter takes it.
    *
    * @generated from field: string name = 2;
    */
@@ -82,8 +83,9 @@ export type TrackJson = {
   trackId?: number;
 
   /**
-   * The name to show: "Unknown track" when the detector is not sure (v1's
-   * `name`).
+   * The name to show (format.TrackLabel): the layout's name when the
+   * detector is sure, else the circuit's when only that is known, such as
+   * "Fuji", else "Unknown track" (v1's `name`). The track filter takes it.
    *
    * @generated from field: string name = 2;
    */

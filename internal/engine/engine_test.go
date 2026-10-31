@@ -28,17 +28,20 @@ var started = timestamppb.New(time.Date(2026, 10, 18, 9, 2, 41, 0, time.UTC))
 // The live values of contracts' example: ecu 0.1.14 driving lap 3 of 6 at
 // Suzuka East, with radio in the voice channel.
 func driving() (*statev1.EcuStatus, *statev1.LiveSession, *statev1.RadioStatus) {
-	return &statev1.EcuStatus{
-			Source: "live", RunId: "run-1", Version: "0.1.14", StartedAt: started,
-			Activity: statev1.Activity_ACTIVITY_DRIVING, TelemetryConnected: true, LastPacketAgeSecs: ptr(0.0), Packets: 9000,
-		}, &statev1.LiveSession{
-			SessionId: "01JB9QZ4V3X8M2K7T5R1N6PDWA", SessionType: eventsv1.SessionType_SESSION_TYPE_LAP_RACE,
-			Track:   &statev1.LiveTrack{TrackId: ptr[int32](442), Name: "Suzuka Circuit East Course", Sure: true},
-			CarName: "Honda Civic Si Group A version '87", Lap: ptr[int32](3), TotalLaps: ptr[int32](6),
-			Position: ptr[int32](1), TotalCars: ptr[int32](2),
-		}, &statev1.RadioStatus{
-			Source: "live", Sink: statev1.RadioSink_RADIO_SINK_DISCORD, VoiceConnected: ptr(true), VoiceListeners: ptr[int32](1),
-		}
+	ecu := &statev1.EcuStatus{
+		Source: "live", RunId: "run-1", Version: "0.1.14", StartedAt: started,
+		Activity: statev1.Activity_ACTIVITY_DRIVING, TelemetryConnected: true, LastPacketAgeSecs: ptr(0.0), Packets: 9000,
+	}
+	session := &statev1.LiveSession{
+		SessionId: "01JB9QZ4V3X8M2K7T5R1N6PDWA", SessionType: eventsv1.SessionType_SESSION_TYPE_LAP_RACE,
+		Track:   &statev1.LiveTrack{TrackId: ptr[int32](442), Name: "Suzuka Circuit East Course", Sure: true},
+		CarName: "Honda Civic Si Group A version '87", Lap: ptr[int32](3), TotalLaps: ptr[int32](6),
+		Position: ptr[int32](1), TotalCars: ptr[int32](2),
+	}
+	radio := &statev1.RadioStatus{
+		Source: "live", Sink: statev1.RadioSink_RADIO_SINK_DISCORD, VoiceConnected: ptr(true), VoiceListeners: ptr[int32](1),
+	}
+	return ecu, session, radio
 }
 
 // want is contracts' examples/pitwall/v1/get_engine_status_response.json.

@@ -11,7 +11,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 
-import type { components } from "@/api/schema";
+import type { Session } from "@/api/hooks";
 import { KindBadge } from "@/components/kind-badge";
 import { LapTime } from "@/components/lap-time";
 import { LiveBadge, type LiveState } from "@/components/live-badge";
@@ -21,7 +21,6 @@ import { Unknown } from "@/components/unknown";
 import { raceTime, sessionDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-type Session = components["schemas"]["Session"];
 
 const FRAME =
   "@container relative w-full rounded-md border bg-surface p-4 transition-colors duration-fast hover:border-border-strong";

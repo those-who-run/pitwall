@@ -15,6 +15,7 @@ import { RouteError } from "./route-error";
 import { SECTIONS, type Section } from "./sections";
 import { Shell } from "./shell";
 import { usePageTitle } from "./title";
+import { v1Api, v1Url } from "@/api/testing";
 
 vi.hoisted(() => {
   class PageRequest extends Request {
@@ -32,12 +33,12 @@ afterEach(() => {
 
 /** The engineer is down; the pit wall is 0.7.1. */
 function api() {
-  return vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-    const path = new URL((input as Request).url).pathname;
+  return vi.spyOn(globalThis, "fetch").mockImplementation(v1Api(async (input) => {
+    const path = v1Url(input as Request).pathname;
     return path === "/healthz"
       ? Response.json({ ok: true, version: "0.7.1", index: true, engineer: false })
       : Response.json({ error: "the engineer is not answering" }, { status: 502 });
-  });
+  }));
 }
 
 function Page({ title }: { title: string }) {

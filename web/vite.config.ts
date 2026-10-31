@@ -18,7 +18,7 @@ export default defineConfig({
     manifest: true,
   },
   server: {
-    // Outside web/, what the tests read: the format cases shared with pytest
+    // Outside web/, what the tests read: the map's traces from v1's fixtures
     // and the design guide whose contrast table the tokens are checked against.
     fs: {
       allow: [
@@ -27,7 +27,7 @@ export default defineConfig({
         fileURLToPath(new URL("../docs", import.meta.url)),
       ],
     },
-    proxy: { "/api": { target: pitwall, ws: true }, "/healthz": pitwall },
+    proxy: { "/twr.pitwall.v1.PitwallService": pitwall, "/healthz": pitwall },
   },
   test: {
     // Component tests run in jsdom; the route import test asks for node itself.

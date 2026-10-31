@@ -165,7 +165,8 @@ case).
 ## Numbers
 
 `web/src/lib/format.ts` is the only formatter. Its cases are shared with
-Python in `tests/fixtures/format-cases.json`.
+the Go formatter in contracts' `format/format-cases.json`, at the tag
+`web/buf.gen.yaml` pins (`web/src/api/gen/format-cases.json`).
 
 | What | Function | Examples |
 |---|---|---|
@@ -198,8 +199,9 @@ Rules:
   25 recordings in `tests/fixtures/` (16 cars) the capacity is 100 while
   driving, so one of GT7's units has been 1% of a tank. With no capacity the
   page shows the raw amount, labelled "units" (#298).
-- The cases in `tests/fixtures/format-cases.json` are the definition: Vitest
-  checks them all. (In v1, pytest also checked those with a Python formatter.)
+- The cases in contracts' `format/format-cases.json` are the definition: Vitest
+  checks them all, and so does contracts' Go `format` package, which the
+  results card and the pit wall's API use (those-who-run/paddock#128).
 - An unknown number is `—`. It is never 0, `None` or blank.
 
 ## Components

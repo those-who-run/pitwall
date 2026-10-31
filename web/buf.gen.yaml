@@ -1,0 +1,22 @@
+# The pit wall's TypeScript client, generated from contracts at the tag pinned
+# here (those-who-run/paddock#127): protobuf-es v2's messages and service
+# descriptors, which connect-es and connect-query read as they are. `npm run
+# api` writes src/api/gen/ (scripts/contracts.ts, which also takes
+# format/format-cases.json from the same tag), and `npm run api:check` fails
+# while it is stale. Renovate bumps the tag.
+version: v2
+inputs:
+  - git_repo: https://github.com/those-who-run/contracts.git
+    tag: v0.2.9
+    paths:
+      - proto/twr/pitwall/v1
+plugins:
+  - local: protoc-gen-es
+    out: src/api/gen
+    include_imports: false
+    opt:
+      - target=ts
+      - import_extension=none
+      # Enums as objects: tsconfig has erasableSyntaxOnly.
+      - erasable_syntax=true
+      - json_types=true

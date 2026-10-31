@@ -11,7 +11,7 @@ const DATA_RULE =
   "All data goes through the generated client and its hooks (ADR 0003 point 3): use a hook from @/api/hooks, or add one there.";
 
 export default defineConfig([
-  globalIgnores(["dist", "test-results", "playwright-report", "src/api/schema.d.ts"]),
+  globalIgnores(["dist", "test-results", "playwright-report", "src/api/gen"]),
   {
     files: ["**/*.{ts,tsx}"],
     extends: [js.configs.recommended, tseslint.configs.recommended],
@@ -41,8 +41,10 @@ export default defineConfig([
       "no-restricted-imports": [
         "error",
         {
-          paths: [{ name: "openapi-fetch", message: DATA_RULE }],
-          patterns: [{ regex: "(^@/api/client$|/api/client$)", message: DATA_RULE }],
+          patterns: [
+            { regex: "(^@/api/client$|/api/client$)", message: DATA_RULE },
+            { regex: "(^@/api/gen/|/api/gen/).*_pb$", message: DATA_RULE },
+          ],
         },
       ],
     },

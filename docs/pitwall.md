@@ -46,13 +46,14 @@ only reads: the index is opened read-only and no session data is written.
 ## The shell
 
 Every page sits in the shell (`web/src/app/`): a header with the 走り屋
-wordmark and the **live engineer chip**, which asks `/api/engine/status` every
+wordmark and the **live engineer chip**, which asks `GetEngineStatus` every
 5 s while the tab is visible and says "Live · Suzuka Circuit · L3", "Paused",
 "Replay", "Demo", "Idle" (or "In the menus"), or "Engineer offline" when the
 engineer doesn't answer; the pages carry on either way. Tap it for the
-engineer's version, telemetry and voice, a link to the live session, and the
-pit wall's own version; when the two versions differ it says a deploy is
-rolling out. The sections' navigation (`web/src/app/sections.ts`) appears once
+engineer's version, telemetry and voice ("Unknown" when `radio` says nothing
+of it), a link to the live session, and the pit wall's own version. The two
+version apart in v2, so a difference is not a warning
+(those-who-run/paddock#125 R7). The sections' navigation (`web/src/app/sections.ts`) appears once
 there are two. **Add to Home Screen** on the iPhone (Safari, Share, Add to Home
 Screen) gives the 走り屋 icon and opens the pit wall full screen with no Safari
 bars, from `web/public/manifest.webmanifest`; there is no service worker, so a

@@ -1,9 +1,11 @@
-// format.ts against the cases it shares with Python (#294 R6, R7):
-// tests/fixtures/format-cases.json, which tests/test_format_cases.py checks against
-// results.race_time. A change to either side that changes an output fails one of them.
+// format.ts against the cases it shares with the Go formatter (#294 R6, R7;
+// those-who-run/paddock#128): contracts' format/format-cases.json at the tag
+// buf.gen.yaml pins, taken into src/api/gen/ by `npm run api`, which contracts'
+// format package checks too. A change to either side that changes an output fails
+// one of them: a case changed in contracts reaches here as a contracts bump.
 import { describe, expect, it } from "vitest";
 
-import casesJson from "../../../tests/fixtures/format-cases.json?raw";
+import casesJson from "../api/gen/format-cases.json?raw";
 import * as format from "./format";
 
 interface Case {

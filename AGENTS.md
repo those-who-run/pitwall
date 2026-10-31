@@ -87,7 +87,7 @@ and a recording that pins a behaviour where one applies.
 (those-who-run/paddock#120). Its own rules (Node, packages, tokens, the kit,
 tests) are in [`web/AGENTS.md`](web/AGENTS.md). `make web-check` runs its
 checks, as CI's `web` job does, and `make check` runs it too: ESLint, `tsc`,
-the API client against `web/openapi.json`, Vitest, the build and the bundle
+the generated client against the pinned `contracts` tag, Vitest, the build and the bundle
 budget. It needs Node at the version in `web/.node-version`. The brand's
 colours are `web/src/styles/brand.css`, edited by hand
 (those-who-run/paddock#129).

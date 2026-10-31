@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SESSIONS as KIT } from "./kit/samples";
 import { legacySessionLink, routes } from "./routes";
+import { v1Api, v1Url } from "@/api/testing";
 
 function args(url: string): LoaderFunctionArgs {
   return { request: new Request(url), params: {}, context: undefined } as unknown as LoaderFunctionArgs;
@@ -62,8 +63,8 @@ class PageRequest extends Request {
 /** Answers the data API with `body`; the engineer is down, and the pit wall is 0.7.1. */
 function answer(status: number, body: unknown) {
   vi.stubGlobal("Request", PageRequest);
-  return vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-    const path = new URL((input as Request).url).pathname;
+  return vi.spyOn(globalThis, "fetch").mockImplementation(v1Api(async (input) => {
+    const path = v1Url(input as Request).pathname;
     if (path === "/api/engine/status") {
       return new Response(JSON.stringify({ error: "the engineer is not answering" }), { status: 502 });
     }
@@ -71,12 +72,12 @@ function answer(status: number, body: unknown) {
       return new Response(JSON.stringify({ ok: true, version: "0.7.1", index: true, engineer: false }));
     }
     return new Response(JSON.stringify(body), { status });
-  });
+  }));
 }
 
 /** The data API's paths the page asked for, without the shell's own calls. */
 function dataCalls(fetch: ReturnType<typeof answer>): string[] {
-  return fetch.mock.calls.map(([r]) => new URL((r as Request).url).pathname).filter((p) => p.startsWith("/api/v1/"));
+  return fetch.mock.calls.map(([r]) => v1Url(r as Request).pathname).filter((p) => p.startsWith("/api/v1/"));
 }
 
 describe("the session list, through the generated client", () => {

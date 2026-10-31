@@ -78,8 +78,11 @@ export function activityLine(view: EngineView): string {
   }[activity];
 }
 
-/** The engineer and the pit wall on different versions: a deploy is rolling out
- * (R3, ADR 0004 point 10). Unknown when either version is unknown. */
-export function versionsDiffer(view: EngineView, pitwall: string | null | undefined): boolean {
-  return view.state === "online" && !!pitwall && view.status.version !== pitwall;
+/** The popover's voice line: unknown when radio says nothing of the voice
+ * (those-who-run/paddock#125 R6), never "off" for that. */
+export function voiceLine(status: EngineStatus): string {
+  if (status.voice_connected === null) {
+    return "Unknown";
+  }
+  return status.voice_connected ? "In the voice channel" : "Not in the voice channel";
 }

@@ -1,0 +1,31 @@
+{
+  "sessionId": "01JB9QZ4V3X8M2K7T5R1N6PDWA",
+  "laps": [
+    {
+      "lap": 3,
+      "timeMs": 82544,
+      "complete": true,
+      "fuelStart": 37.908443450927734,
+      "fuelEnd": 22.89894676208496,
+      "fuelUsed": 15.009,
+      "position": 1,
+      "frames": 4953,
+      "topSpeedKph": 171.4,
+      "pit": true,
+      "fuelUse": true
+    },
+    {
+      "lap": 4,
+      "timeMs": 69892,
+      "complete": true,
+      "fuelStart": 22.89894676208496,
+      "fuelEnd": 81.47602844238281,
+      "fuelUsed": -58.577,
+      "position": 1,
+      "frames": 4441,
+      "topSpeedKph": 168.9,
+      "outLap": true,
+      "fuelUse": true
+    }
+  ]
+}

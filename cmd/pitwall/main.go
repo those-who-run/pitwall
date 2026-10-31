@@ -1,6 +1,8 @@
-// Command pitwall runs the template's example service: it reads its configuration
-// from the environment, logs JSON to standard output and serves GET /healthz until
-// it gets SIGINT or SIGTERM. `pitwall -version` prints its version and exits.
+// Command pitwall serves the pit wall (paddock#124): PitwallService over Connect,
+// read from logbook and the live KV over NATS, GET /healthz and the built web app,
+// on one origin. It reads its configuration from the environment
+// (internal/service), logs JSON to standard output and serves until it gets
+// SIGINT or SIGTERM. `pitwall -version` prints its version and exits.
 package main
 
 import (
@@ -12,6 +14,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	_ "time/tzdata" // the list's days are in the viewer's zone, and the image has no zoneinfo
 
 	"github.com/those-who-run/pitwall/internal/service"
 )

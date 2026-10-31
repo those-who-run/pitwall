@@ -1,0 +1,12 @@
+{
+  "sources": [
+    "live",
+    "v1-import"
+  ],
+  "track": "Suzuka Circuit East Course",
+  "sessionType": "SESSION_TYPE_LAP_RACE",
+  "fromDay": "2026-10-01",
+  "timeZone": "Europe/Dublin",
+  "limit": 200,
+  "knownDataVersion": "5:1828"
+}

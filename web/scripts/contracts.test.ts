@@ -31,6 +31,15 @@ describe("the contracts check", () => {
     expect(files(join(want, "missing"))).toEqual([]);
   });
 
+  it("finds a format case changed from the tag's (#128 AC3)", () => {
+    // What a local contracts build with one case's text changed gives `npm run api`:
+    // until the copy here is regenerated from it, `api:check` names the file.
+    const body = readFileSync(join("src", "api", "gen", "format-cases.json"), "utf8");
+    const changed = body.replace('"out": "49.677"', '"out": "49.678"');
+    expect(changed).not.toBe(body);
+    expect(differences(tree({ "format-cases.json": changed }), tree({ "format-cases.json": body }))).toEqual(["format-cases.json"]);
+  });
+
   it("fails when buf.gen.yaml and go.mod pin contracts apart", () => {
     const gomod = "module x\n\nrequire (\n\tgithub.com/those-who-run/contracts v0.2.8\n\tgoogle.golang.org/protobuf v1.36.12\n)\n";
     expect(goContracts(gomod)).toBe("v0.2.8");

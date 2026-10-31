@@ -16,6 +16,18 @@ interface Case {
 }
 
 const { cases } = JSON.parse(casesJson) as { cases: Case[] };
+
+// changeText is out with one character added to its text: to a string, or to the
+// first string field of an object such as position's { position, of }.
+function changeText(out: unknown): unknown {
+  if (typeof out === "string") return `${out}x`;
+  if (out !== null && typeof out === "object") {
+    const entries = Object.entries(out);
+    const at = entries.findIndex(([, v]) => typeof v === "string");
+    if (at >= 0) return Object.fromEntries(entries.map(([k, v], i) => [k, i === at ? `${String(v)}x` : v]));
+  }
+  throw new Error(`a case's out has no text to change: ${JSON.stringify(out)}`);
+}
 const formatters = format as unknown as Record<string, (...args: unknown[]) => unknown>;
 
 describe("the shared format cases", () => {
@@ -25,6 +37,20 @@ describe("the shared format cases", () => {
       const fn = formatters[c.fn];
       expect(fn, `format.ts has no ${c.fn}`).toBeTypeOf("function");
       expect(fn!(...c.args)).toEqual(c.out);
+    },
+  );
+
+  // #128 AC3: a case changed in contracts fails this test. contracts' tag is the
+  // only way a case reaches here: `npm run api` takes it, and `npm run api:check`
+  // fails on any byte that differs from the tag's (scripts/contracts.test.ts). So
+  // this changes each case's expected text, as an edit in a local contracts build
+  // would, and the check above must then reject it: no case passes whatever it says.
+  it.each(cases.map((c) => [`${c.fn}(${c.args.map((a) => JSON.stringify(a)).join(", ")})`, c] as const))(
+    "%s fails once its expected text is changed",
+    (_, c) => {
+      const changed = changeText(c.out);
+      expect(changed).not.toEqual(c.out);
+      expect(formatters[c.fn]!(...c.args)).not.toEqual(changed);
     },
   );
 

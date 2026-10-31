@@ -2,7 +2,7 @@
 
 For the driver and anyone running the pit wall: the web app as a driver uses it, the data API behind it, the store it reads, the preview on a phone or iPad, and the pitwall image. Back to v1's [docs index](https://github.com/those-who-run/those-who-run/blob/v1.0.0/docs/README.md).
 
-This page came over from v1 with the web app (those-who-run/paddock#120) and still describes v1's pit wall server: those-who-run/paddock#124 and those-who-run/paddock#127 bring v2's.
+This page came over from v1 with the web app (those-who-run/paddock#120). "Running it" and "The data API" describe v2's server (those-who-run/paddock#124); the rest still describes v1 until those-who-run/paddock#127 and those-who-run/paddock#131 bring v2's.
 
 ## Pages
 
@@ -60,48 +60,32 @@ deploy is never hidden behind a stale cache.
 
 ## Running it
 
-The pit wall runs beside the engineer, from the pitwall image or from source,
-reading the engineer's data directory. One thing to know before mounting that
-directory: because the index is in WAL mode, a reader still needs to write SQLite's
-shared-memory file, `index.sqlite-shm`, next to it, and needs `-wal` and `-shm`
-to exist already if it cannot create them. SQLite removes both when the last
-connection closes, so on a read-only mount (`:ro`, `readOnly: true`) the pit
-wall can only open the index while the engineer is running. Mount the data
-directory read-write for the pit wall; it still opens the index `mode=ro`.
-
-It needs only the core install (aiohttp, DuckDB, PyYAML), not the `engineer`
-extra (Discord, Piper, gt-telem, metrics), and the built web app (`make
-web-build`, which needs Node; see [the web app's guide](../web/README.md)):
+`pitwall` (`cmd/pitwall`) is v2's pit wall server, in Go (those-who-run/paddock#124).
+It holds no data and mounts no volume: the sessions come from `logbook`, over
+NATS, and the engineer's status from the `live` KV bucket. One origin serves
+the API, `/healthz` and the built web app (`make web-build`, which needs Node;
+see [the web app's guide](../web/README.md)):
 
 ```sh
 make web-build
-GT7_DATA_DIR=./data those-who-run pitwall --static web/dist   # http://localhost:9852
+TWR_NATS_URL=nats://127.0.0.1:4222 TWR_PITWALL_STATIC_DIR=web/dist go run ./cmd/pitwall   # http://localhost:8080
 ```
 
-Its configuration:
+Its configuration, from the environment (the `TWR_*` prefix is the
+maintainer's decision D5, 2026-10-31; `ADDR` and `LOG_LEVEL` are every
+component's):
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `GT7_DATA_DIR` | `./data` | The session store it reads. |
-| `GT7_PITWALL_PORT` | `9852` | Its port (`--port` wins). |
-| `GT7_PITWALL_STATIC` | unset | The built web app (`--static` wins). The pitwall image sets `/app/web`. |
-| `GT7_ENGINEER_URL` | `http://those-who-run:9850` | The engineer's read-only port, for the live chip and `/api/engine/dash`. |
-| `GT7_ENGINEER_CONTROL_URL` | `http://those-who-run:9851` | The engineer's control port, for `/api/engine/control/*`. |
+| `ADDR` | `:8080` | Where it listens; compose publishes it on 9852, as v1's port. |
+| `LOG_LEVEL` | `info` | `debug` adds an access log line per request: method, path, status and time, never a header or the query. |
+| `TWR_NATS_URL` | `nats://127.0.0.1:4222` | The NATS server `logbook` and the `live` bucket are on. NATS down at the start doesn't stop the pit wall: it keeps trying, and serves the web app meanwhile. |
+| `TWR_PITWALL_STATIC_DIR` | unset | The built web app. Unset serves the API and `/healthz` only. |
+| `TWR_PITWALL_SRC` | `live,v1-import` | The sources whose sessions it shows, comma separated, in order of preference: v2's own and v1's imported history (decision D7). A list naming no source is an error, never "every source". |
+| `TWR_PITWALL_STALE` | `15s` | How old `ecu`'s live status may be before the chip says "Engineer offline". |
 
-The pitwall image (below) carries the built app:
-
-```sh
-VERSION=1.0.0  # x-release-please-version
-podman run --rm -p 9852:9852 -v ./data:/data muldoon/those-who-run:${VERSION}-pitwall
-```
-
-(The tag is built from `VERSION` because release-please would read a
-`-pitwall` suffix as part of the version and drop it.)
-
-It listens on all addresses and has no login: keep it on the LAN. The images'
-health check is `those-who-run healthcheck`: it probes the engineer's `/healthz`
-on `GT7_METRICS_PORT` for `run`, and the pit wall's `/healthz` on
-`GT7_PITWALL_PORT` (or `--port`) for `pitwall`.
+It has no login: keep it on the LAN (decision D1). It stops within 1 s of
+SIGTERM, so a rollout never waits on it.
 
 ## The preview on the phone and iPad
 
@@ -118,52 +102,56 @@ the engineer's status is live while the sessions are the copy;
 
 ## The data API
 
-`those-who-run pitwall` serves the pit wall's read-only data API on port 9852
-(`--port` or `GT7_PITWALL_PORT`, `--address` to bind), for the React pit wall
-(ADR 0003) and the dashboards. It needs only the core install: aiohttp,
-DuckDB and PyYAML.
+The API is `twr.pitwall.v1.PitwallService`, a Connect service defined in
+`contracts` (contracts#41), at `/twr.pitwall.v1.PitwallService/<Method>`. Every
+method has no side effects, so the web app calls it with GET and the browser's
+cache works.
 
-| Route | What it returns |
-|---|---|
-| `GET /api/v1/sessions?track=&car=&kind=` | Sessions, newest first, and the values each filter can take |
-| `GET /api/v1/sessions/{id}` | One session |
-| `GET /api/v1/sessions/{id}/laps` | Its lap table, flags included (`pit`, `out_lap`, `invalid`, `restart`, `best`, `clean`) |
-| `GET /api/v1/sessions/{id}/laps/{lap}/trace?points=1500` | Speed, throttle, brake, gear, RPM and the car's position (`x`, `z`, in metres) against time, thinned keeping peaks and both frames either side of a jump in position (the pit cut-scene) |
-| `GET /api/v1/sessions/{id}/same-track` | The other sessions at the same track, for lap compare |
-| `GET /api/v1/openapi.json` | The OpenAPI 3.1 schema of all of these |
-| `GET /healthz` | `ok`, `version`, `index` and `engineer` |
-| `/api/engine/status`, `/api/engine/dash`, `/api/engine/control/{path}` | Forwarded to the engineer |
+| Method | What it answers | v1's route |
+|---|---|---|
+| `ListSessions` | Sessions, newest first, filtered by track, car, kind and days in the viewer's zone, with the values each filter can take | `GET /api/v1/sessions` |
+| `GetSession` | One session | `GET /api/v1/sessions/{id}` |
+| `ListLaps` | Its lap table, flags included (`pit`, `out_lap`, `invalid`, `restart`, `best`, `clean`) | `GET /api/v1/sessions/{id}/laps` |
+| `GetTrace` | One lap's speed, throttle, brake, gear, RPM and position against time | `GET /api/v1/sessions/{id}/laps/{lap}/trace` |
+| `ListSameTrack` | The other sessions at the same track, for lap compare | `GET /api/v1/sessions/{id}/same-track` |
+| `GetEngineStatus` | What the engineer is doing now, for the live chip | `GET /api/engine/status` |
+| `GET /healthz` (plain HTTP) | `ok`, `version`, and whether `nats` and `logbook` answered | `GET /healthz` |
 
-- **Values, not card strings** (ADR 0004 point 6). A session carries
-  `final_position`, `total_cars`, `best_lap_ms` and the rest as numbers, with
-  the names Python owns (`kind_label`, `track.name`, `position_shown`) beside
-  them, and the card's `title` and `result`.
-- **The schema** is generated from the response models in
-  `src/those_who_run/pitwall/api_models.py` and committed as
-  `web/openapi.json`. Change a model, run `make openapi` and commit the file:
-  `make check` fails while it is stale.
-- **Read-only**: the index is opened `mode=ro` per request and
-  nothing is written under `GT7_DATA_DIR`. Responses carry an `ETag` that
-  changes only when the engineer writes (a trace's, only when its lap file
-  does), so polling gets 304; JSON over 1 KB is gzipped.
-- **The engineer, on the same origin.** `/api/engine/status` and the dash
-  WebSocket `/api/engine/dash` go to `GT7_ENGINEER_URL`'s `/api/v1/status` and
-  `/api/v1/dash`, and `/api/engine/control/{path}` to
-  `GT7_ENGINEER_CONTROL_URL`'s `/api/v1/{path}`. The `Authorization` header
-  passes through unchanged and is never logged. With the engineer down these
-  answer 502 within 2 s, and the data routes carry on.
-- **`/healthz`** is 200 while the data directory is readable, with no index yet
-  on a new volume too, and 503 when it is not. `engineer` says whether the
-  engineer answered; an engineer that is down never fails it.
-- **`--static DIR`** serves the built web app (`web/dist`) on every other path,
-  with `index.html` for client routes such as `/sessions/<id>` and
-  `/?session=<id>`. Hashed files under `assets/` are cached for a year;
-  `index.html` is never cached.
-
-```sh
-GT7_DATA_DIR=./data those-who-run pitwall                 # http://localhost:9852
-curl -s localhost:9852/api/v1/sessions | jq '.sessions[0]'
-```
+- **From `logbook`.** Each data method asks `logbook`'s micro endpoints
+  (`svc.logbook.*`, `twr.store.v1`) for the sources in `TWR_PITWALL_SRC`, and
+  maps the answer (decision D6): `logbook` keeps `ecu`'s summary and laps as
+  `ecu` published them, and the pit wall works out the names, flags and labels
+  the page shows (`internal/api/map.go`): the track's name as the card names it
+  (the layout when the detector is sure, else the circuit, else "Unknown
+  track"), which the track filter takes too, the lap flags from `ecu`'s pit roles, `ecu`'s best lap, the
+  restart laps from the session's gaps, the position only in a field GT7 flags.
+- **The card's words.** A session's `title`, `result` and `kind_label` are the
+  results card's, from `contracts`' `format` package (`Title`, `Result`,
+  `KindLabel`), which `podium`'s card calls too, so the page and the card never
+  name a session differently. The track's name and `position_shown` come from
+  the same package.
+- **ETags.** Every data answer carries a weak `ETag` holding `logbook`'s
+  `data_version` and `Cache-Control: no-cache`. A GET with that ETag in
+  `If-None-Match` passes the version to `logbook` as `known_data_version`, which
+  answers `unchanged` at next to no cost, and the pit wall answers 304 with no
+  body. Answers over 1 KB are gzipped when the browser takes it.
+- **Errors** are Connect's: a session or lap that isn't there is `not_found`, a
+  bad argument `invalid_argument`, and `logbook` not answering within 2 s
+  `unavailable`. The web app is served all the same.
+- **The engineer's status** comes from a watch on `ecu.status.live`,
+  `ecu.session.live` and `radio.status.live` in the `live` bucket, kept open for
+  the server's life (those-who-run/paddock#125). Only the `live` source's keys
+  are read, so a replay never shows. With no value, a value older than
+  `TWR_PITWALL_STALE` or NATS down it answers `ACTIVITY_OFFLINE`, never an
+  error, and it is never cached (`no-store`). `voice_connected` is absent when
+  `radio` says nothing of it.
+- **`/healthz`** is 200 whether or not NATS and `logbook` answer, and 503 only
+  when `TWR_PITWALL_STATIC_DIR` is set and its `index.html` can't be read.
+- **The web app** is served from `TWR_PITWALL_STATIC_DIR` on every other path,
+  with `index.html` for client routes such as `/sessions/<id>`, `/_kit` and
+  v1's results-card link `/?session=<id>` (permanent, ADR 0009 and 0011).
+  Hashed files under `assets/` are cached for a year, and a missing one is a
+  404; `index.html` is never cached.
 
 ## The store
 

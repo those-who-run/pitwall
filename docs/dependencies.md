@@ -27,5 +27,8 @@ the test reads.
 
 | Module | Why |
 | --- | --- |
-
-The module has no direct dependencies yet: the table is empty.
+| `connectrpc.com/connect/v2` | The Connect runtime the generated `PitwallService` code needs, and `connecthttp` to serve it over `net/http` with GET, ETags and gzip (paddock#124). v2, as contracts generates it (contracts#41). |
+| `github.com/google/go-cmp` | Tests only: `protocmp`'s diffs of the API's answers against contracts' examples. |
+| `github.com/nats-io/nats.go` | NATS: the requests to logbook's micro endpoints (`svc.logbook.*`) and the watch on the `live` KV bucket for the engineer's status (paddock#125), as in every v2 component. |
+| `github.com/those-who-run/contracts` | The project's contracts: `twr.pitwall.v1` (the API), `twr.store.v1` (logbook's answers) and `twr.state.v1` (the live values), and their generated Go. |
+| `google.golang.org/protobuf` | protobuf's JSON form, which logbook's answers and the live values travel in (ADR 0002), and the messages themselves. |

@@ -1,36 +1,69 @@
-// Package service is the template's example service, kept to the conventions every
-// Go component starts from (README.md, "Conventions"): configuration from the
-// environment, log/slog writing JSON, and a health endpoint. A component replaces
-// what it serves and keeps the shape.
+// Package service is the pit wall's server (paddock#124), kept to the conventions
+// every Go component starts from (README.md, "Conventions"): configuration from
+// the environment, log/slog writing JSON, and a health endpoint. On one origin it
+// serves PitwallService over Connect (internal/api), GET /healthz, and the built
+// web app from a directory.
 package service
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"net"
 	"net/http"
+	"strings"
 	"time"
+
+	"github.com/nats-io/nats.go"
+
+	"github.com/those-who-run/pitwall/internal/api"
+	"github.com/those-who-run/pitwall/internal/engine"
 )
 
+// DefaultSources is TWR_PITWALL_SRC when unset: v2's own sessions and v1's
+// imported history (the maintainer's decision D7, 2026-10-31).
+var DefaultSources = []string{"live", "v1-import"}
+
 // Config is the service's configuration, read from the environment by
-// ConfigFromEnv.
+// ConfigFromEnv. Its own settings carry the TWR_ prefix (the maintainer's
+// decision D5, 2026-10-31); ADDR and LOG_LEVEL are the chassis's, as in every
+// component.
 type Config struct {
 	// Addr is the address the HTTP server listens on: ADDR, ":8080" when unset.
 	Addr string
 	// LogLevel is the lowest level logged: LOG_LEVEL (debug, info, warn or error),
 	// info when unset.
 	LogLevel slog.Level
+	// NATSURL is the NATS server logbook and the live KV are on: TWR_NATS_URL,
+	// nats://127.0.0.1:4222 when unset.
+	NATSURL string
+	// StaticDir is the built web app's directory: TWR_PITWALL_STATIC_DIR. Unset
+	// serves no web app, only the API and /healthz.
+	StaticDir string
+	// Sources are the sources whose sessions the pit wall shows, in logbook's
+	// order of preference: TWR_PITWALL_SRC, comma separated, DefaultSources when
+	// unset. A list with no source in it is an error, never "every source".
+	Sources []string
+	// Stale is how old ecu's live status may be before the chip says the
+	// engineer is offline: TWR_PITWALL_STALE, a Go duration such as 15s,
+	// engine.DefaultStale when unset.
+	Stale time.Duration
 }
 
 // ConfigFromEnv reads the configuration through getenv, which is os.Getenv outside
 // the tests. An unset or empty variable takes its default; a value that can't be
 // read is an error, so a typo stops the service rather than being ignored.
 func ConfigFromEnv(getenv func(string) string) (Config, error) {
-	cfg := Config{Addr: ":8080", LogLevel: slog.LevelInfo}
+	cfg := Config{
+		Addr:      ":8080",
+		LogLevel:  slog.LevelInfo,
+		NATSURL:   nats.DefaultURL,
+		StaticDir: getenv("TWR_PITWALL_STATIC_DIR"),
+		Sources:   DefaultSources,
+		Stale:     engine.DefaultStale,
+	}
 	if addr := getenv("ADDR"); addr != "" {
 		cfg.Addr = addr
 	}
@@ -38,6 +71,27 @@ func ConfigFromEnv(getenv func(string) string) (Config, error) {
 		if err := cfg.LogLevel.UnmarshalText([]byte(level)); err != nil {
 			return Config{}, fmt.Errorf("LOG_LEVEL: %w", err)
 		}
+	}
+	if url := getenv("TWR_NATS_URL"); url != "" {
+		cfg.NATSURL = url
+	}
+	if src := getenv("TWR_PITWALL_SRC"); src != "" {
+		cfg.Sources = nil
+		for s := range strings.SplitSeq(src, ",") {
+			if s = strings.TrimSpace(s); s != "" {
+				cfg.Sources = append(cfg.Sources, s)
+			}
+		}
+		if len(cfg.Sources) == 0 {
+			return Config{}, fmt.Errorf("TWR_PITWALL_SRC: %q names no source", src)
+		}
+	}
+	if stale := getenv("TWR_PITWALL_STALE"); stale != "" {
+		d, err := time.ParseDuration(stale)
+		if err != nil || d <= 0 {
+			return Config{}, fmt.Errorf("TWR_PITWALL_STALE: %q is not a duration above zero, such as 15s", stale)
+		}
+		cfg.Stale = d
 	}
 	return cfg, nil
 }
@@ -48,26 +102,14 @@ func NewLogger(w io.Writer, level slog.Level) *slog.Logger {
 	return slog.New(slog.NewJSONHandler(w, &slog.HandlerOptions{Level: level}))
 }
 
-// Handler serves the health endpoint, GET /healthz, which answers 200 with the
-// service's version while the process can serve requests.
-func Handler(version string) http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		// An error here is the client gone; there is no one left to tell.
-		_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok", "version": version})
-	})
-	return mux
-}
+// shutdownGrace is how long Run lets requests in flight finish once ctx is done:
+// a rollout never waits on the pit wall (paddock#124 R8, v1's SHUTDOWN_SECS).
+const shutdownGrace = time.Second
 
-// shutdownGrace is how long Run lets requests in flight finish once ctx is done.
-const shutdownGrace = 10 * time.Second
-
-// The server's limits, for a small JSON service whose requests are short: a client
+// The server's limits, for a small service whose requests are short: a client
 // that is slow to send its headers or its whole request, or slow to read the
 // response, is cut off rather than holding a connection, and an idle keep-alive
-// connection is closed after a minute. A component with long requests or
-// streaming responses raises them.
+// connection is closed after a minute.
 const (
 	readHeaderTimeout = 5 * time.Second
 	readTimeout       = 10 * time.Second
@@ -75,16 +117,40 @@ const (
 	idleTimeout       = 60 * time.Second
 )
 
-// Run listens on cfg.Addr and serves Handler until ctx is done, then shuts the
-// server down gracefully. It returns nil after a clean shutdown, or why it could
-// not listen or serve.
+// Run connects to NATS, listens on cfg.Addr and serves until ctx is done, then
+// shuts the server down gracefully. NATS not answering at the start does not
+// stop it: the connection keeps trying, the data methods answer unavailable
+// and the chip offline meanwhile, and the web app is served (paddock#124 R3).
+// It returns nil after a clean shutdown, or why it could not listen or serve.
 func Run(ctx context.Context, cfg Config, logger *slog.Logger, version string) error {
 	var lc net.ListenConfig
 	ln, err := lc.Listen(ctx, "tcp", cfg.Addr)
 	if err != nil {
 		return fmt.Errorf("listen: %w", err)
 	}
-	return serve(ctx, ln, logger, version)
+	nc, err := nats.Connect(cfg.NATSURL,
+		nats.Name("pitwall"),
+		nats.RetryOnFailedConnect(true),
+		nats.MaxReconnects(-1),
+		nats.ReconnectWait(time.Second),
+	)
+	if err != nil {
+		_ = ln.Close()
+		return fmt.Errorf("nats: %w", err)
+	}
+	defer nc.Close()
+	watcher := engine.New(nc, cfg.Stale, logger)
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go watcher.Run(ctx)
+	deps := Deps{
+		Version:   version,
+		API:       api.New(nc, cfg.Sources, version, watcher, 0),
+		StaticDir: cfg.StaticDir,
+		Health:    natsHealth{nc: nc},
+		Logger:    logger,
+	}
+	return serve(ctx, ln, Handler(deps), logger, version)
 }
 
 // newServer is the HTTP server for h, with the limits above, logging its own errors
@@ -100,8 +166,8 @@ func newServer(h http.Handler, logger *slog.Logger) *http.Server {
 	}
 }
 
-func serve(ctx context.Context, ln net.Listener, logger *slog.Logger, version string) error {
-	srv := newServer(Handler(version), logger)
+func serve(ctx context.Context, ln net.Listener, h http.Handler, logger *slog.Logger, version string) error {
+	srv := newServer(h, logger)
 	served := make(chan error, 1)
 	go func() { served <- srv.Serve(ln) }()
 	logger.InfoContext(ctx, "serving", "addr", ln.Addr().String(), "version", version)

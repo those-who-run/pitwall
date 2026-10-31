@@ -9,7 +9,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
-	"net/http/httptest"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -84,30 +84,49 @@ func fetch(ctx context.Context, url string) (int, error) {
 }
 
 func TestConfigFromEnv(t *testing.T) {
+	defaults := func(change func(*Config)) Config {
+		c := Config{Addr: ":8080", LogLevel: slog.LevelInfo, NATSURL: "nats://127.0.0.1:4222",
+			Sources: []string{"live", "v1-import"}, Stale: 15 * time.Second}
+		change(&c)
+		return c
+	}
 	for _, c := range []struct {
 		name string
 		vars map[string]string
 		want Config
 	}{
-		{"defaults", nil, Config{Addr: ":8080", LogLevel: slog.LevelInfo}},
-		{"set", map[string]string{"ADDR": "127.0.0.1:9000", "LOG_LEVEL": "debug"},
-			Config{Addr: "127.0.0.1:9000", LogLevel: slog.LevelDebug}},
+		{"defaults", nil, defaults(func(*Config) {})},
+		{"set", map[string]string{"ADDR": "127.0.0.1:9000", "LOG_LEVEL": "debug", "TWR_NATS_URL": "nats://nats:4222",
+			"TWR_PITWALL_STATIC_DIR": "/srv/web", "TWR_PITWALL_SRC": " live , replay-x,", "TWR_PITWALL_STALE": "20s"},
+			defaults(func(c *Config) {
+				c.Addr, c.LogLevel, c.NATSURL, c.StaticDir = "127.0.0.1:9000", slog.LevelDebug, "nats://nats:4222", "/srv/web"
+				c.Sources, c.Stale = []string{"live", "replay-x"}, 20*time.Second
+			})},
 		{"upper case level", map[string]string{"LOG_LEVEL": "WARN"},
-			Config{Addr: ":8080", LogLevel: slog.LevelWarn}},
+			defaults(func(c *Config) { c.LogLevel = slog.LevelWarn })},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			got, err := ConfigFromEnv(env(c.vars))
-			if err != nil || got != c.want {
+			if err != nil || !reflect.DeepEqual(got, c.want) {
 				t.Errorf("ConfigFromEnv = %+v, %v; want %+v, nil", got, err, c.want)
 			}
 		})
 	}
 }
 
-func TestConfigFromEnvRefusesAnUnknownLevel(t *testing.T) {
-	_, err := ConfigFromEnv(env(map[string]string{"LOG_LEVEL": "loud"}))
-	if err == nil || !strings.HasPrefix(err.Error(), "LOG_LEVEL: ") {
-		t.Errorf("ConfigFromEnv(LOG_LEVEL=loud) error = %v, want one naming LOG_LEVEL", err)
+func TestConfigFromEnvRefusesWhatItCannotRead(t *testing.T) {
+	for name, vars := range map[string]map[string]string{
+		"LOG_LEVEL":         {"LOG_LEVEL": "loud"},
+		"TWR_PITWALL_SRC":   {"TWR_PITWALL_SRC": " , "},
+		"TWR_PITWALL_STALE": {"TWR_PITWALL_STALE": "soon"},
+	} {
+		_, err := ConfigFromEnv(env(vars))
+		if err == nil || !strings.HasPrefix(err.Error(), name+": ") {
+			t.Errorf("ConfigFromEnv(%v) error = %v, want one naming %s", vars, err, name)
+		}
+	}
+	if _, err := ConfigFromEnv(env(map[string]string{"TWR_PITWALL_STALE": "-1s"})); err == nil {
+		t.Error("a stale limit below zero is no error")
 	}
 }
 
@@ -130,33 +149,6 @@ func TestNewLoggerWritesJSONFromItsLevel(t *testing.T) {
 	}
 }
 
-func TestHealthz(t *testing.T) {
-	rec := httptest.NewRecorder()
-	Handler("1.2.3").ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/healthz", nil))
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200", rec.Code)
-	}
-	if ct := rec.Header().Get("Content-Type"); ct != "application/json" {
-		t.Errorf("Content-Type = %q", ct)
-	}
-	var body map[string]string
-	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
-		t.Fatal(err)
-	}
-	if body["status"] != "ok" || body["version"] != "1.2.3" {
-		t.Errorf("body = %v", body)
-	}
-}
-
-func TestHealthzIsGetOnly(t *testing.T) {
-	rec := httptest.NewRecorder()
-	Handler("1.2.3").ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/healthz", nil))
-	if rec.Code != http.StatusMethodNotAllowed {
-		t.Errorf("POST /healthz status = %d, want 405", rec.Code)
-	}
-}
-
 func TestRunServesUntilCancelled(t *testing.T) {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -165,7 +157,7 @@ func TestRunServesUntilCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	var logs bytes.Buffer
 	done := make(chan error, 1)
-	go func() { done <- serve(ctx, ln, NewLogger(&logs, slog.LevelInfo), "test") }()
+	go func() { done <- serve(ctx, ln, testHandler(t, Deps{}), NewLogger(&logs, slog.LevelInfo), "test") }()
 
 	if code := get(t, "http://"+ln.Addr().String()+"/healthz"); code != http.StatusOK {
 		t.Errorf("GET /healthz status = %d", code)
@@ -203,7 +195,9 @@ func TestRunListensOnTheConfiguredAddress(t *testing.T) {
 	defer cancel()
 	logs := newReadyLog()
 	done := make(chan error, 1)
-	go func() { done <- Run(ctx, Config{Addr: "127.0.0.1:0"}, NewLogger(logs, slog.LevelInfo), "test") }()
+	// No NATS answers there: the pit wall serves all the same (paddock#124 R3).
+	cfg := Config{Addr: "127.0.0.1:0", NATSURL: "nats://" + closedAddress(t), Sources: DefaultSources}
+	go func() { done <- Run(ctx, cfg, NewLogger(logs, slog.LevelInfo), "test") }()
 	// The timeouts only stop a hung test; Run is cancelled once it serves.
 	select {
 	case <-logs.ready:
@@ -256,7 +250,7 @@ func TestServeReportsAListenerThatFails(t *testing.T) {
 		t.Fatal(err)
 	}
 	_ = ln.Close() // Serve fails at once on a closed listener
-	err = serve(t.Context(), ln, NewLogger(io.Discard, slog.LevelInfo), "test")
+	err = serve(t.Context(), ln, http.NotFoundHandler(), NewLogger(io.Discard, slog.LevelInfo), "test")
 	if err == nil || errors.Is(err, http.ErrServerClosed) {
 		t.Errorf("serve on a closed listener = %v, want an error", err)
 	}

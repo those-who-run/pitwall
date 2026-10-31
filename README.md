@@ -30,8 +30,8 @@ The ones every Go component shares, from the
 
 - **Configuration from the environment**, read once at start-up into a typed
   struct; an unset variable takes its default and a value that can't be read
-  stops the process. The example reads `ADDR` (`:8080`) and
-  `LOG_LEVEL` (`info`).
+  stops the process. The pit wall reads `ADDR` (`:8080`), `LOG_LEVEL`
+  (`info`) and its own `TWR_*` settings ([`docs/pitwall.md`](docs/pitwall.md#running-it)).
 - **Logging with `log/slog`, as JSON** on standard output, one object per line,
   with key-value pairs.
 - **A health endpoint**, `GET /healthz`, which answers 200 while the process can

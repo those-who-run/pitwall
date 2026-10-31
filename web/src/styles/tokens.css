@@ -3,7 +3,7 @@
 
    - Colours are semantic CSS variables on :root, so a light theme is a second set
      under [data-theme="light"], not a rewrite (point 2). The brand's come from
-     brand.css, which scripts/brand_css.py writes from brand.py.
+     brand.css, edited by hand.
    - @theme maps them to Tailwind's utilities (bg-surface, text-muted,
      text-timing-best…), and Tailwind's own palette, sizes and radii are cleared,
      so a utility is a token or nothing.

@@ -5,32 +5,30 @@ For anyone working on the React pit wall in `web/`: its stack, the rules the bui
 `web/` is the React pit wall (ADR 0003): Vite,
 React and TypeScript (strict), Tailwind, Radix through shadcn/ui components in
 `web/src/components/ui/`, TanStack Query, and React Router in data mode. It
-builds to static files in `web/dist`, which `those-who-run pitwall --static
-web/dist` serves (or `GT7_PITWALL_STATIC`): the session list, the session page
+builds to static files in `web/dist`, which v1's `those-who-run pitwall --static
+web/dist` served (v2's server is those-who-run/paddock#124): the session list, the session page
 and lap compare ([the pit wall guide](../docs/pitwall.md)); a results card's old `/?session=<id>`
 link lands on `/sessions/<id>`.
 
 - **Data** comes only through the client generated from `web/openapi.json` into
-  `web/src/api/schema.d.ts` (`npm run api` in `web/` after `make openapi`), and
+  `web/src/api/schema.d.ts` (`npm run api` in `web/`; v1's schema until those-who-run/paddock#127), and
   the TanStack Query hooks in `web/src/api/hooks.ts`. ESLint fails `fetch` or
   the client anywhere outside `web/src/api/`.
 - **Style comes only from the design tokens** (ADR 0004,
   [`docs/design.md`](../docs/design.md)) in `web/src/styles/`: ESLint fails a
   colour literal or an arbitrary Tailwind value anywhere else in `web/src/`, a
   Vitest test checks every allowed colour pair's contrast, and the brand
-  colours are generated from `brand.py` into `web/src/styles/brand.css` (`make
-  brand-css`; `make check` fails when it is stale). The fonts (Barlow and
+  colours are `web/src/styles/brand.css`, edited by hand. The fonts (Barlow and
   Barlow Semi Condensed) are self-hosted from `@fontsource`; the app is dark
   only.
-- **Numbers become text only in `web/src/lib/format.ts`**, whose cases,
-  `tests/fixtures/format-cases.json`, pytest checks against the results card's
-  formatter too.
+- **Numbers become text only in `web/src/lib/format.ts`**, whose cases are
+  `tests/fixtures/format-cases.json`.
 - **No browser-only code at module top level**: a Vitest test imports every
   route module under Node with no DOM.
 - **Each route is a lazy chunk**, under a gzipped budget in
   `web/bundle-budget.json` (the entry, and each route at most 60 KB). `node
   scripts/bundle-budget.ts --set` in `web/` resets it to the build plus 10%.
-- **Playwright** runs the built app against the real `pitwall` over a store
+- **Playwright** (off until those-who-run/paddock#130) runs the built app against the real `pitwall` over a store
   replayed from fixtures, in Chromium at 390×844, 820×1180 and 1440×900. It
   checks nothing scrolls sideways and saves screenshots to
   `web/test-results/screenshots/`, which CI uploads. The helpers in `web/e2e/`
@@ -45,8 +43,7 @@ package with the npm that ships with that Node.
 ```sh
 make web-build       # web/dist
 make web-dev         # Vite on http://localhost:5173, /api proxied to a local pitwall on 9852
-make web-check       # ESLint, tsc, Vitest, client freshness, bundle budget, Playwright
-cd web && npx playwright install chromium   # once, for web-check
+make web-check       # ESLint, tsc, client freshness, Vitest, the build, bundle budget
 ```
 
-**On the phone and iPad** from a laptop: `make web-preview` ([the preview](../docs/pitwall.md#the-preview-on-the-phone-and-ipad)).
+**On the phone and iPad** v1 had `make web-preview` ([the preview](../docs/pitwall.md#the-preview-on-the-phone-and-ipad)); it comes back with v2's server.

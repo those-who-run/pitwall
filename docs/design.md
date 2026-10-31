@@ -1,11 +1,11 @@
 # Design guide
 
 The working reference for the web app: the pit wall and the dashboards. The
-rules are in [ADR 0004](adr/0004-design-language.md). This page holds the
+rules are in [ADR 0004](https://github.com/those-who-run/those-who-run/blob/v1.0.0/docs/adr/0004-design-language.md). This page holds the
 values, and a normal PR may change them. When the code and this page disagree,
 fix one of them in the same PR.
 
-The look is the brand's, from `brand.py`: **a 90s Japanese track-day shop.
+The look is the brand's, from `brand.css`: **a 90s Japanese track-day shop.
 Advan red on black, carbon grey panels, white type.** It is technical, quiet
 and dense with numbers. Red is used sparingly, like a livery stripe, not as
 paint.
@@ -46,7 +46,7 @@ dialogs get one shadow token, `--shadow-overlay` (`0 8px 32px` at 50% black),
 over a 60% black scrim (`--scrim`).
 
 The tokens live in `web/src/styles/tokens.css`, the brand's from
-`web/src/styles/brand.css` (generated from `brand.py` by `make brand-css`).
+`web/src/styles/brand.css` (edited by hand, the brand's one source).
 Tailwind's own palette is cleared, so the utilities are the tokens:
 `bg-bg`, `bg-surface`, `bg-surface-raised`, `border-border`,
 `border-border-strong`, `text-fg` (for `--text`), `text-muted`, `text-subtle`,

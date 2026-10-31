@@ -1,9 +1,9 @@
-"""The workflows behind `main`'s required checks run in the merge queue: ci.yml and,
-with an image, image.yml (`image / build`) trigger on merge_group, and their
-concurrency cancels only a superseded PR run. A queue whose required checks never
-report never merges. The workflows that release or score (release-pr.yml,
-release.yml, scorecard.yml) stay out of the queue. Standard library only, so the
-trigger block is read as text. Copied from chassis (those-who-run/chassis#23)."""
+"""The workflows behind `main`'s required checks run in the merge queue: ci.yml
+(`test`, `checks / checks`, `go / check`) and, with an image, image.yml
+(`image / build`) trigger on merge_group, and their concurrency cancels only a
+superseded PR run. A queue whose required checks never report never merges. The
+workflows that release or score (release-pr.yml, release.yml, scorecard.yml) stay
+out of the queue. Standard library only, so the trigger block is read as text."""
 
 from __future__ import annotations
 

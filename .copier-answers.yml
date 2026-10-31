@@ -1,0 +1,10 @@
+# Written by copier from those-who-run/chassis: what `copier update` needs to bring
+# the template's later changes in. Change it only through copier.
+_commit: v1.0.5
+_src_path: https://github.com/those-who-run/chassis.git
+description: 'The pit wall for Those Who Run v2: the web app and its API, which reads
+    sessions and laps through `logbook`. The API is a Connect service defined in `contracts`,
+    and the web app is served from the same origin.'
+image: true
+name: pitwall
+title: Pitwall

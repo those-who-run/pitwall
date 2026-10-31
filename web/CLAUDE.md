@@ -8,4 +8,4 @@ The rules are in `AGENTS.md` above; these notes are only for Claude Code.
   before saying the work is done; `make check` before opening the PR.
 - When a Playwright test fails, read its screenshot and trace in
   `test-results/` before changing the test.
-- Python rules are in the root `CLAUDE.md`; keep them out of web work.
+- The repository's rules for Claude Code are in the root `CLAUDE.md`.

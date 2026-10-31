@@ -1,102 +1,58 @@
-// Starts the real pit wall over a store replayed from fixtures, serving web/dist
-// (ADR 0003 point 5), with a stub engineer behind it (./engineer.ts, #296). Specs
-// get its address as PITWALL_URL, through ./pitwall.ts.
+// Starts v2's pit wall over a logbook store, serving web/dist (ADR 0003 point 5;
+// those-who-run/paddock#130). Specs get its address as PITWALL_URL, through
+// ./pitwall.ts.
 //
-// The store is made the way the Python tests make one: `those-who-run replay
-// <fixture> --store <dir>` for each fixture in STORE_FIXTURES, into a temporary
-// directory removed afterwards. TWR names the command (make sets it to
-// .venv/bin/those-who-run).
+// The maintainer's decision D8 (2026-10-31): NATS and the pinned logbook image over
+// a committed data directory, and no ecu. web/e2e/store/data was made from v1's
+// recordings replayed through ecu (web/e2e/store/make.go); the set-up copies it,
+// starts NATS with paddock's streams and live bucket, starts logbook on the copy,
+// then starts the Go API (`go build ./cmd/pitwall`, or PITWALL_BIN) once for each
+// of v1's stores, each showing that store's sources (./store.ts, STORES):
 //
-// Beside it, a pit wall for each of the other stores (#297): one with a session of
-// no full lap, an empty one, and one whose index can't be read. Specs reach them
-// through `storeUrl(name)` in ./pitwall.ts, so the main store stays as every other
-// spec expects it.
+// - the main store, PITWALL_URL: the joined race, the time trial, the race, the
+//   pit stop, and the pit stop again as a session still open (#298 AC5);
+// - beside it (#297), reached through `storeUrl(name)`: one with a session of no
+//   full lap, an empty one, and lap compare's (#299), whose no-stop race is
+//   missing lap MISSING_LAP's file, deleted from the copy here; and one whose
+//   logbook can't be reached, v1's "index can't be read": a pit wall on a NATS
+//   address nothing listens on, whose data calls answer unavailable.
 //
-// One session in the main store is then copied in as still open (./store.ts), for
-// the live session page (#298 AC5), unless E2E_NO_LIVE_SESSION is set: the docs'
-// screenshots show a store whose sessions have all finished, as the "Idle" engineer
-// chip says.
-import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+// The engineer is the live bucket (./engineer.ts). E2E_CONTAINER names the
+// container runtime (docker unless set; podman works as well).
+import { execFileSync, spawn, type ChildProcess } from "node:child_process";
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { gunzipSync } from "node:zlib";
 
-import { setPitwallVersion, startEngineer } from "./engineer";
-import { makeLiveSession } from "./store";
+import { bootstrap, closeNats } from "./nats";
+import { MANIFEST, SESSION, STORE_DIR, STORES } from "./store";
 
 const WEB = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const ROOT = resolve(WEB, "..");
-const FIXTURES = join(ROOT, "tests", "fixtures");
 
-/** Replayed into the store, in this order: a timed race the engineer joined on lap
- * 7 (#298 R8), a time trial (#297 AC1), then the race and the pit stop (#237 AC1).
- * The time trial stands in for #297's drift session: since #260 the engineer
- * ignores that recording as GT7's demo race, so it leaves nothing in a store. The
- * joined race and the time trial go first, so the newest sessions are as they were. */
-export const STORE_FIXTURES = [
-  "real-nuc-suzuka-joined-mid-race-2026-10-18.jsonl.gz",
-  "real-nuc-fuji-timed-2026-10-15.jsonl.gz",
-  "real-nuc-gilles-villeneuve-race-2026-10-17.jsonl.gz",
-  "real-nuc-suzuka-pit-stop-2026-10-15.jsonl.gz",
-];
+/** The images, pinned by digest (paddock#130 R5): NATS as paddock's compose runs
+ * it, and the logbook web/e2e/store/make.go made the store with. Renovate bumps
+ * them (renovate.json). */
+export const NATS_IMAGE =
+  "docker.io/library/nats:2.15.1-alpine@sha256:7ae34c25dfd6fe2e01c6483eabef20d796690fdcac6c4d94ca780a6cf9877fde";
+export const LOGBOOK_IMAGE =
+  "ghcr.io/those-who-run/twr-logbook:0.1.7@sha256:b4fe71257ed0a122cb6942072c1dcff8192c2ae0fd345b4a13b8ff852d85ffd0";
 
-/** The time trial, which the short store has too (#297 AC2). */
-const TIME_TRIAL = "real-nuc-fuji-timed-2026-10-15.jsonl.gz";
-
-/** The fixture the open session (./store.ts) is copied from: the pit stop's six laps. */
-export const LIVE_SOURCE_FIXTURE = "real-nuc-suzuka-pit-stop-2026-10-15.jsonl.gz";
-
-/** Sessions in the main store: one per fixture, and the open one. */
-export const STORE_SESSIONS = STORE_FIXTURES.length + 1;
-
-/** The race's first minute, cut with `those-who-run thin`: a session with no full
- * lap (#297 AC2). */
-const ZERO_LAP = { fixture: "real-nuc-gilles-villeneuve-race-2026-10-17.jsonl.gz", end: 60 };
-
-/** The other pit walls (#297 AC2, AC6): the time trial and the zero-lap session;
- * no sessions at all; an index that isn't SQLite; and lap compare's (#299). */
-export type OtherStore = "short" | "empty" | "broken" | "compare";
-
-/** Lap compare's store (#299): the race, and two Suzuka East Course races at one
- * sure track id, the pit stop and the session with no stop, so lap B can come from
- * another session at the track. */
-export const COMPARE_FIXTURES = [
-  "real-nuc-gilles-villeneuve-race-2026-10-17.jsonl.gz",
-  "real-nuc-suzuka-pit-stop-2026-10-15.jsonl.gz",
-  "real-nuc-suzuka-no-stop-2026-10-15.jsonl.gz",
-];
-
-/** The lap whose Parquet file the setup deletes from the no-stop session in the
- * compare store, so a spec sees a missing lap file (#299 AC5). The session's id and
- * the lap are in process.env.E2E_MISSING_LAP, as `<session id>/<lap>`. */
+/** The lap whose Parquet file the set-up deletes from the no-stop race in the copy,
+ * so a spec sees a missing lap file (#299 AC5). The session's id and the lap are in
+ * process.env.E2E_MISSING_LAP, as `<session id>/<lap>`. */
 export const MISSING_LAP = 6;
 
-/** Makes the compare store at `dir`, and returns `<session id>/<lap>` of the lap
- * file it deleted from the no-stop session (the last replayed). */
-function compareStore(command: string, dir: string): string {
-  const fixtures = COMPARE_FIXTURES.map((f) => join(FIXTURES, f));
-  replay(command, dir, fixtures.slice(0, -1));
-  const sessions = join(dir, "sessions");
-  const before = new Set(readdirSync(sessions));
-  replay(command, dir, fixtures.slice(-1));
-  const noStop = readdirSync(sessions).find((id) => !before.has(id));
-  const file = join(sessions, noStop ?? "", `lap-${String(MISSING_LAP).padStart(2, "0")}.parquet`);
-  if (!noStop || !existsSync(file)) {
-    throw new Error(`the compare store has no ${file} to delete`);
-  }
-  rmSync(file);
-  return `${noStop}/${MISSING_LAP}`;
-}
+/** Sessions in the main store. */
+export const STORE_SESSIONS = STORES.main.length;
 
-function twr(): string {
-  const command = process.env.TWR ?? join(ROOT, ".venv", "bin", "those-who-run");
-  if (!existsSync(command)) {
-    throw new Error(`${command} not found: run make venv, or set TWR to those-who-run`);
-  }
-  return command;
-}
+/** The other pit walls (#297 AC2, AC6, #299). */
+export type OtherStore = "short" | "empty" | "broken" | "compare";
+
+const container = () => process.env.E2E_CONTAINER ?? "docker";
 
 function freePort(): Promise<number> {
   return new Promise((ok, fail) => {
@@ -110,143 +66,177 @@ function freePort(): Promise<number> {
   });
 }
 
-async function waitForHealth(url: string, ms: number): Promise<void> {
+async function waitFor(what: string, ms: number, ready: () => Promise<boolean>): Promise<void> {
   const until = Date.now() + ms;
   for (;;) {
     try {
-      // Any answer will do: the broken store's pit wall is up but unhealthy.
-      await fetch(`${url}/healthz`);
-      return;
+      if (await ready()) {
+        return;
+      }
     } catch {
-      // not listening yet
+      // not answering yet
     }
     if (Date.now() > until) {
-      throw new Error(`the pit wall did not answer ${url}/healthz within ${ms} ms`);
+      throw new Error(`${what} was not ready within ${ms} ms`);
     }
-    await new Promise((r) => setTimeout(r, 100));
+    await new Promise((r) => setTimeout(r, 200));
   }
 }
 
-function run(command: string, args: string[], env: NodeJS.ProcessEnv): void {
-  const out = spawnSync(command, args, { env, stdio: ["ignore", "ignore", "inherit"] });
-  if (out.status !== 0) {
-    throw new Error(`those-who-run ${args.slice(0, 2).join(" ")} failed (exit ${out.status})`);
+/** Runs a container detached, on the host's network, and returns its name. */
+function runContainer(name: string, args: string[]): string {
+  execFileSync(container(), ["run", "--detach", "--rm", "--name", name, "--network", "host", ...args], {
+    stdio: ["ignore", "ignore", "inherit"],
+  });
+  return name;
+}
+
+function stopContainer(name: string): void {
+  try {
+    if (process.env.E2E_LOGS) {
+      execFileSync(container(), ["logs", name], { stdio: "inherit" });
+    }
+    execFileSync(container(), ["stop", "--time", "5", name], { stdio: "ignore" });
+  } catch {
+    // already gone
   }
 }
 
-/** Replays so far, for E2E_REPLAY_CLOCK. */
-let replays = 0;
-
-/** `replay`'s `--clock`, when E2E_REPLAY_CLOCK (epoch seconds) is set: each replay's
- * sessions are dated from it, an hour apart in replay order, in place of the wall
- * clock, so the store is the same on every run and every day (the docs'
- * screenshots, #336). Every fixture is under an hour long; a longer one would
- * overlap the next. Unset, the replay names its sessions by the clock. */
-function clockArgs(): string[] {
-  const start = process.env.E2E_REPLAY_CLOCK;
-  return start ? ["--clock", String(Number(start) + 3600 * replays++)] : [];
-}
-
-/** Replays `recordings` into the store at `data`, in order. */
-function replay(command: string, data: string, recordings: string[]): void {
-  const env = { ...process.env, LOG_LEVEL: "WARNING", GT7_DATA_DIR: data };
-  for (const recording of recordings) {
-    run(command, ["replay", recording, "--store", data, ...clockArgs()], env);
+/** The store's copy in `dir`: the index unzipped, and the no-stop race's lap
+ * MISSING_LAP's file gone. */
+function copyStore(dir: string): void {
+  cpSync(new URL("data", STORE_DIR), dir, { recursive: true });
+  const gz = join(dir, "index.duckdb.gz");
+  writeFileSync(join(dir, "index.duckdb"), gunzipSync(readFileSync(gz)));
+  rmSync(gz);
+  const noStop = SESSION("replay-e2e-no-stop");
+  const lap = join(dir, "sessions", "replay-e2e-no-stop", noStop, `lap-${String(MISSING_LAP).padStart(3, "0")}.parquet`);
+  if (!existsSync(lap)) {
+    throw new Error(`the store has no ${lap} to delete`);
   }
+  rmSync(lap);
+  process.env.E2E_MISSING_LAP = `${noStop}/${MISSING_LAP}`;
 }
 
-/** The other stores, made under `tmp`: their data directories by name. */
-function otherStores(command: string, tmp: string): Record<OtherStore, string> {
-  const dirs = {
-    short: join(tmp, "short"),
-    empty: join(tmp, "empty"),
-    broken: join(tmp, "broken"),
-    compare: join(tmp, "compare"),
-  };
-  process.env.E2E_MISSING_LAP = compareStore(command, dirs.compare);
-  const zeroLap = join(tmp, "zero-lap.jsonl.gz");
-  run(command, ["thin", join(FIXTURES, ZERO_LAP.fixture), zeroLap, "--end", String(ZERO_LAP.end)], process.env);
-  replay(command, dirs.short, [join(FIXTURES, TIME_TRIAL), zeroLap]);
-  mkdirSync(dirs.empty);
-  mkdirSync(dirs.broken);
-  writeFileSync(join(dirs.broken, "index.sqlite"), "not a database ".repeat(512));
-  return dirs;
+/** The Go API, built from this checkout unless PITWALL_BIN names one. */
+function pitwallBinary(tmp: string): string {
+  if (process.env.PITWALL_BIN) {
+    return process.env.PITWALL_BIN;
+  }
+  const bin = join(tmp, "pitwall");
+  execFileSync("go", ["build", "-o", bin, "./cmd/pitwall"], { cwd: ROOT, stdio: "inherit" });
+  return bin;
 }
 
-/** A pit wall over the store at `data`, serving web/dist, with `engineer` behind it. */
+/** A pit wall showing `sources`, on NATS at `natsUrl`, serving web/dist. */
 async function startPitwall(
-  command: string,
-  data: string,
-  engineer: string,
-  logLevel = "WARNING",
-): Promise<{ url: string; stop: () => Promise<void> }> {
+  bin: string,
+  natsUrl: string,
+  sources: readonly string[],
+): Promise<{ url: string; process: ChildProcess }> {
   const port = await freePort();
   const url = `http://127.0.0.1:${port}`;
-  const env = {
-    ...process.env,
-    LOG_LEVEL: logLevel,
-    GT7_DATA_DIR: data,
-    GT7_ENGINEER_URL: engineer,
-    GT7_ENGINEER_CONTROL_URL: "http://127.0.0.1:9",
-  };
-  const args = ["pitwall", "--address", "127.0.0.1", "--port", String(port), "--static", join(WEB, "dist")];
-  const server = spawn(command, args, { env, stdio: "inherit" });
-  const exited = new Promise<void>((r) => server.once("exit", () => r()));
-  await waitForHealth(url, 15_000);
-  return {
-    url,
-    stop: async () => {
-      server.kill("SIGTERM");
-      await exited;
+  const child = spawn(bin, [], {
+    env: {
+      ...process.env,
+      ADDR: `127.0.0.1:${port}`,
+      LOG_LEVEL: "warn",
+      TWR_NATS_URL: natsUrl,
+      TWR_PITWALL_SRC: sources.join(","),
+      TWR_PITWALL_STATIC_DIR: join(WEB, "dist"),
+      // The engineer's values are written once per test, not every second as ecu
+      // does: a value is never stale within a run.
+      TWR_PITWALL_STALE: "1h",
     },
-  };
+    stdio: ["ignore", "inherit", "inherit"],
+  });
+  await waitFor(`the pit wall on ${url}`, 15_000, async () => (await fetch(`${url}/healthz`)).ok);
+  return { url, process: child };
 }
 
 export default async function globalSetup(): Promise<() => Promise<void>> {
   if (!existsSync(join(WEB, "dist", "index.html"))) {
     throw new Error("web/dist has no index.html: run make web-build first");
   }
-  const command = twr();
   const tmp = mkdtempSync(join(tmpdir(), "twr-e2e-"));
   const data = join(tmp, "data");
-  const sessionIds = () => (existsSync(join(data, "sessions")) ? readdirSync(join(data, "sessions")) : []);
-  for (const fixture of STORE_FIXTURES) {
-    const before = new Set(sessionIds());
-    replay(command, data, [join(FIXTURES, fixture)]);
-    if (fixture === LIVE_SOURCE_FIXTURE && !process.env.E2E_NO_LIVE_SESSION) {
-      // The replay names its session by the clock: the one directory it added.
-      const [id] = sessionIds().filter((d) => !before.has(d));
-      if (!id) {
-        throw new Error(`those-who-run replay ${fixture} stored no session`);
-      }
-      makeLiveSession(data, id);
-      process.env.PITWALL_LIVE_SOURCE = id;
+  copyStore(data);
+  const bin = pitwallBinary(tmp);
+  const run = `twr-e2e-${process.pid}`;
+  const containers: string[] = [];
+  const pitwalls: ChildProcess[] = [];
+  const stop = async () => {
+    for (const p of pitwalls) {
+      p.kill("SIGTERM");
     }
-  }
-  // For the live spec, which adds laps to the open session as the engineer would.
-  process.env.PITWALL_STORE = data;
-  const others = otherStores(command, tmp);
-
-  // The stub engineer (./engineer.ts): down unless a test asks for a scenario, so
-  // /api/engine/status is a 502 and the data routes carry on. No control port.
-  const engineer = await startEngineer();
-  const main = await startPitwall(command, data, engineer.url);
-  const started = await Promise.all(
-    (Object.entries(others) as [OtherStore, string][]).map(
-      // The broken store's pit wall logs a traceback per ask: expected, and kept out.
-      async ([name, dir]) =>
-        [name, await startPitwall(command, dir, engineer.url, name === "broken" ? "CRITICAL" : "WARNING")] as const,
-    ),
-  );
-  // The stub's engineer is on the pit wall's version unless a scenario says not.
-  setPitwallVersion(((await (await fetch(`${main.url}/healthz`)).json()) as { version: string }).version);
-  process.env.PITWALL_URL = main.url;
-  process.env.PITWALL_STORES = JSON.stringify(Object.fromEntries(started.map(([name, p]) => [name, p.url])));
-
-  return async () => {
-    await Promise.all([main, ...started.map(([, p]) => p)].map((p) => p.stop()));
-    engineer.server.closeAllConnections();
-    await new Promise<void>((r) => engineer.server.close(() => r()));
+    await closeNats();
+    for (const name of containers.reverse()) {
+      stopContainer(name);
+    }
     rmSync(tmp, { recursive: true, force: true });
   };
+
+  try {
+    const natsPort = await freePort();
+    const natsUrl = `nats://127.0.0.1:${natsPort}`;
+    containers.push(runContainer(`${run}-nats`, [NATS_IMAGE, "-js", "-a", "127.0.0.1", "-p", String(natsPort)]));
+    process.env.E2E_NATS_URL = natsUrl;
+    await waitFor("NATS", 30_000, async () => {
+      await bootstrap({ events: MANIFEST.events_seq, frames: MANIFEST.frames_seq });
+      return true;
+    });
+
+    // logbook as the image's user would be: here, the runner's, so the copy it
+    // writes to is the runner's.
+    const healthPort = await freePort();
+    const uid = process.getuid?.() ?? 1000;
+    const gid = process.getgid?.() ?? 1000;
+    const podman = container() === "podman";
+    containers.push(
+      runContainer(`${run}-logbook`, [
+        "--user",
+        `${uid}:${gid}`,
+        ...(podman ? ["--userns", "keep-id"] : []),
+        "--volume",
+        `${data}:/data${podman ? ":z" : ""}`,
+        "--env",
+        "TWR_DATA_DIR=/data",
+        "--env",
+        `TWR_NATS_URL=${natsUrl}`,
+        "--env",
+        `TWR_HEALTH_ADDR=127.0.0.1:${healthPort}`,
+        LOGBOOK_IMAGE,
+      ]),
+    );
+    await waitFor("logbook", 60_000, async () => (await fetch(`http://127.0.0.1:${healthPort}/healthz`)).ok);
+
+    const main = await startPitwall(bin, natsUrl, STORES.main);
+    pitwalls.push(main.process);
+    // logbook answers once its services are up: the main pit wall's /healthz says.
+    await waitFor("logbook's services", 30_000, async () => {
+      const h = (await (await fetch(`${main.url}/healthz`)).json()) as { logbook: boolean };
+      return h.logbook;
+    });
+    const others: Record<string, string> = {};
+    for (const name of ["short", "empty", "compare"] as const) {
+      const p = await startPitwall(bin, natsUrl, STORES[name]);
+      pitwalls.push(p.process);
+      others[name] = p.url;
+    }
+    // Nothing listens there: the data calls answer unavailable.
+    const broken = await startPitwall(bin, `nats://127.0.0.1:${await freePort()}`, STORES.main);
+    pitwalls.push(broken.process);
+    others.broken = broken.url;
+
+    const version = ((await (await fetch(`${main.url}/healthz`)).json()) as { version: string }).version;
+    process.env.E2E_PITWALL_VERSION = version;
+    process.env.PITWALL_URL = main.url;
+    process.env.PITWALL_STORES = JSON.stringify(others);
+  } catch (err) {
+    await stop();
+    throw err;
+  }
+  // The set-up's own connection; each worker makes its own.
+  await closeNats();
+  return stop;
 }

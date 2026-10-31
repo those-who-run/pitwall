@@ -36,6 +36,7 @@ help:
 	@echo "web-build - build the web app into web/dist"
 	@echo "web-dev   - Vite's dev server on http://localhost:5173, the API proxied to PITWALL_URL"
 	@echo "web-deps  - install web/node_modules from web/package-lock.json (npm ci)"
+	@echo "web-e2e   - Playwright over the built app, the Go API, NATS and logbook (needs Go, Docker and Chromium; CI's e2e job)"
 
 # go.yml's order: gofmt, tidy, vet, golangci-lint, the tests, build, govulncheck.
 .PHONY: check
@@ -120,7 +121,7 @@ guard:
 # The web app (web/, from v1 with those-who-run/paddock#120). Node is the version in
 # web/.node-version, and the packages are web/package-lock.json's, installed with
 # npm ci. A missing Node, or another version, fails rather than building with it.
-# Playwright (web/e2e/) comes back with those-who-run/paddock#130.
+# Playwright (web/e2e/) is web-e2e.
 WEB_DEPS := web/node_modules/.package-lock.json
 
 .PHONY: web-node
@@ -155,3 +156,12 @@ web-check: web-node $(WEB_DEPS)
 	cd web && npm test
 	cd web && npx vite build
 	cd web && npm run budget
+
+# The end-to-end tests (web/e2e/, those-who-run/paddock#130): web/dist on the Go API
+# (built from this checkout), over NATS and the pinned logbook image serving
+# web/e2e/store's data, in Chromium at the three viewports. Needs Go, Docker (or
+# E2E_CONTAINER=podman) and Playwright's Chromium (`cd web && npx playwright install
+# chromium`). Not part of make check: CI's e2e job runs it.
+.PHONY: web-e2e
+web-e2e: web-build
+	cd web && npm run e2e

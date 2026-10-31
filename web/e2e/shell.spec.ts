@@ -4,7 +4,8 @@ import type { Locator, Page } from "@playwright/test";
 
 import { expectAccessible } from "./a11y";
 import { OTHER_VERSION, setEngineer, type Scenario, TRACK } from "./engineer";
-import { apiSessions, expect, expectNoHorizontalScroll, screenshot, sessionLink, test } from "./pitwall";
+import { sessionJson } from "../src/api/testing";
+import { apiSessions, calls, expect, expectNoHorizontalScroll, screenshot, sessionLink, test } from "./pitwall";
 
 async function pitwallVersion(page: Page): Promise<string> {
   return (await (await page.request.get("/healthz")).json()).version;
@@ -107,15 +108,19 @@ test("follows the engineer as it changes, every 5 s (R2)", async ({ page }) => {
   await expect(chip(page)).toHaveText(`Live · ${TRACK} · L3`, { timeout: 7_000 });
 });
 
-test("says a deploy is rolling out when the versions differ (AC3)", async ({ page }, testInfo) => {
+// v2: the components version apart, so the popover shows both versions and warns
+// of nothing (paddock#125 R7, #127 R7; v1's "a deploy is rolling out" is gone).
+test("shows both versions, with no deploy warning, when they differ (AC3)", async ({ page }, testInfo) => {
   const version = await pitwallVersion(page);
   await setEngineer(page, "other-version");
   await page.goto("/");
-  await expect(chip(page)).toHaveAccessibleName("Idle, a deploy is rolling out");
-  await expect(chip(page).locator("[data-slot=deploy-marker]")).toBeVisible();
+  await expect(chip(page)).toHaveAccessibleName("Idle");
+  await expect(chip(page).locator("[data-slot=deploy-marker]")).toHaveCount(0);
   const panel = await openPopover(page);
-  await expect(panel).toContainText(`Engineer ${OTHER_VERSION}, pit wall ${version}: a deploy is rolling out`);
-  await screenshot(page, testInfo, "shell-deploy");
+  await expect(panel).toContainText(`Engineer${OTHER_VERSION}`);
+  await expect(panel).toContainText(`Pit wall ${version} · Read-only`);
+  await expect(panel).not.toContainText("deploy");
+  await screenshot(page, testInfo, "shell-versions");
 });
 
 test("shows no navigation with one section, and both layouts with two (AC4)", async ({ page }, testInfo) => {
@@ -193,8 +198,8 @@ async function longList(page: Page): Promise<ApiSession> {
     started_at: real!.started_at - 60 * i,
   }));
   const options = { track: [], car: [], kind: [] };
-  await page.route(/\/api\/v1\/sessions(\?.*)?$/, (route) =>
-    route.fulfill({ json: { sessions, options, total: sessions.length, matched: sessions.length } }),
+  await page.route(calls("ListSessions"), (route) =>
+    route.fulfill({ json: { sessions: sessions.map(sessionJson), options, total: sessions.length, matched: sessions.length } }),
   );
   return real!;
 }

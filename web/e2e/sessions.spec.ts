@@ -1,8 +1,9 @@
 // The session list (#297) over the real pit wall and replayed stores, at each of the
 // three viewports, each page checked by axe (ADR 0004 point 11). The main store is
-// the time trial, the race and the pit stop; storeUrl() reaches the stores with a
-// session of no full lap, with none at all, and with an index that can't be read.
-// The stub engineer (./engineer.ts) reports the live session.
+// the joined race, the time trial, the race and the pit stop, with the pit stop's
+// open copy; storeUrl() reaches the stores with a session of no full lap, with none
+// at all, and with a logbook that can't be reached. The engineer (./engineer.ts)
+// reports the live session.
 import type { Page } from "@playwright/test";
 
 import { lapTime, raceTime } from "../src/lib/format";
@@ -13,6 +14,7 @@ import {
   apiSessions,
   expect,
   expectNoHorizontalScroll,
+  isCall,
   screenshot,
   sessionLink,
   storeUrl,
@@ -20,23 +22,8 @@ import {
 } from "./pitwall";
 import { LIVE_SESSION_ID } from "./store";
 
-interface ApiSession {
-  session_id: string;
-  title: string;
-  result: string;
-  kind: string;
-  track: { name: string };
-  finished: boolean;
-  total_time_ms: number | null;
-  best_lap_ms: number | null;
-  laps_completed: number;
-}
-
-async function sessionsAt(page: Page, base = ""): Promise<ApiSession[]> {
-  const resp = await page.request.get(`${base}/api/v1/sessions`);
-  expect(resp.ok()).toBe(true);
-  return (await resp.json()).sessions;
-}
+/** The sessions a store's pit wall lists; the main one's unless `base` names another. */
+const sessionsAt = (page: Page, base = "") => apiSessions(page, base);
 
 const card = (page: Page, id: string) =>
   page.locator("[data-slot=session-card]").filter({ has: page.locator(`a[href="/sessions/${id}"]`) });
@@ -227,7 +214,7 @@ test("a filter that matches nothing says so, with Clear filters (R7)", async ({ 
 test("pins the live session and follows its laps without a reload (AC4)", async ({ page }, testInfo) => {
   let asks = 0;
   page.on("request", (r) => {
-    if (new URL(r.url()).pathname === "/api/v1/sessions") {
+    if (isCall(r, "ListSessions")) {
       asks += 1;
     }
   });
@@ -272,7 +259,8 @@ test("an unreadable index shows the error, with Retry (AC6)", async ({ page }, t
   const alert = page.getByRole("main").getByRole("alert");
   await expect(alert).toContainText("Couldn't read the session store.", { timeout: 10_000 });
   await alert.getByText("Details").click();
-  await expect(alert).toContainText("internal server error");
+  // v1's index that couldn't be read is v2's logbook that can't be reached.
+  await expect(alert).toContainText("logbook did not answer");
   const retry = alert.getByRole("button", { name: "Retry" });
   await expect(retry).toBeVisible();
   await expectNoHorizontalScroll(page);

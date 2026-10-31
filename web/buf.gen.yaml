@@ -7,7 +7,7 @@
 version: v2
 inputs:
   - git_repo: https://github.com/those-who-run/contracts.git
-    tag: v0.2.7
+    tag: v0.2.8
     paths:
       - proto/twr/pitwall/v1
 plugins:

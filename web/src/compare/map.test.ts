@@ -1,6 +1,6 @@
 // The track map's geometry and colours (#350 AC1, AC2, AC4), on real laps from the
-// trace route: tests/fixtures/map-traces.json, which tests/test_trace_position.py
-// writes and keeps current.
+// trace route: tests/fixtures/map-traces.json, which v1's tests/test_trace_position.py
+// wrote and kept current.
 import { describe, expect, it } from "vitest";
 
 import type { Trace } from "@/api/hooks";

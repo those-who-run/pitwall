@@ -1,6 +1,8 @@
 # The pit wall
 
-For the driver and anyone running the pit wall: the web app as a driver uses it, the data API behind it, the store it reads, the preview on a phone or iPad, and the pitwall image. Back to the [docs index](README.md).
+For the driver and anyone running the pit wall: the web app as a driver uses it, the data API behind it, the store it reads, the preview on a phone or iPad, and the pitwall image. Back to v1's [docs index](https://github.com/those-who-run/those-who-run/blob/v1.0.0/docs/README.md).
+
+This page came over from v1 with the web app (those-who-run/paddock#120) and still describes v1's pit wall server: those-who-run/paddock#124 and those-who-run/paddock#127 bring v2's.
 
 ## Pages
 

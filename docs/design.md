@@ -1,11 +1,13 @@
 # Design guide
 
+This guide came over from v1 with the web app (those-who-run/paddock#120); a bare `#N` in it is v1's, those-who-run/those-who-run#N.
+
 The working reference for the web app: the pit wall and the dashboards. The
-rules are in [ADR 0004](adr/0004-design-language.md). This page holds the
+rules are in [ADR 0004](https://github.com/those-who-run/those-who-run/blob/v1.0.0/docs/adr/0004-design-language.md). This page holds the
 values, and a normal PR may change them. When the code and this page disagree,
 fix one of them in the same PR.
 
-The look is the brand's, from `brand.py`: **a 90s Japanese track-day shop.
+The look is the brand's, from `brand.css`: **a 90s Japanese track-day shop.
 Advan red on black, carbon grey panels, white type.** It is technical, quiet
 and dense with numbers. Red is used sparingly, like a livery stripe, not as
 paint.
@@ -46,7 +48,7 @@ dialogs get one shadow token, `--shadow-overlay` (`0 8px 32px` at 50% black),
 over a 60% black scrim (`--scrim`).
 
 The tokens live in `web/src/styles/tokens.css`, the brand's from
-`web/src/styles/brand.css` (generated from `brand.py` by `make brand-css`).
+`web/src/styles/brand.css` (edited by hand, the brand's one source).
 Tailwind's own palette is cleared, so the utilities are the tokens:
 `bg-bg`, `bg-surface`, `bg-surface-raised`, `border-border`,
 `border-border-strong`, `text-fg` (for `--text`), `text-muted`, `text-subtle`,
@@ -197,15 +199,14 @@ Rules:
   driving, so one of GT7's units has been 1% of a tank. With no capacity the
   page shows the raw amount, labelled "units" (#298).
 - The cases in `tests/fixtures/format-cases.json` are the definition: Vitest
-  checks them all, and pytest checks those with a Python formatter
-  (`results.race_time`).
+  checks them all. (In v1, pytest also checked those with a Python formatter.)
 - An unknown number is `—`. It is never 0, `None` or blank.
 
 ## Components
 
 The kit is in `web/src/components/`, shown at `/_kit` (#295,
 `web/src/routes/kit.tsx`): open it on the pit wall, or on the phone and iPad
-through `make web-preview`. Use it before writing anything new. A new pattern goes into the
+(v1's `make web-preview` comes back with v2's server). Use it before writing anything new. A new pattern goes into the
 kit first, with all its states, and `/_kit` shows it. `/_kit` is in every build
 but linked from nowhere. Its sample data is `web/src/kit/samples.ts`, typed as
 the API's generated types, with real names from the engineer's store. CI screenshots

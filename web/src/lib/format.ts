@@ -1,7 +1,7 @@
 // The only place a number becomes text (ADR 0004 point 5, docs/design.md, Numbers).
-// Its cases are tests/fixtures/format-cases.json, which pytest checks against the
-// Python formatters too (results.race_time), so the results card and the page never
-// show the same lap differently.
+// Its cases are tests/fixtures/format-cases.json (in v1, pytest checked them against
+// the Python formatters too), so the results card and the page never show the same
+// lap differently.
 //
 // Every function takes what the API sends, null and undefined included, and never
 // returns "null", "NaN" or "undefined": an unknown value is missing() ("—").

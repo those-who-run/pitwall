@@ -1,0 +1,76 @@
+{
+  "sessions": [
+    {
+      "sessionId": "01JB9QZ4V3X8M2K7T5R1N6PDWA",
+      "title": "Suzuka Circuit East Course · 6-lap race",
+      "result": "Finished P1 of 2 in 6:29.934",
+      "startedAt": "2026-10-18T13:21:29.015985Z",
+      "endedAt": "2026-10-18T13:28:01.176172Z",
+      "closed": true,
+      "kind": "lap_race",
+      "kindLabel": "6-lap race",
+      "track": {
+        "trackId": 442,
+        "name": "Suzuka Circuit East Course",
+        "sure": true,
+        "evidence": "finish line crossed, a full lap fits the layout (1.00)"
+      },
+      "car": "Honda Civic Si Group A version '87",
+      "carCode": 683,
+      "finished": true,
+      "finalPosition": 1,
+      "totalCars": 2,
+      "positionShown": true,
+      "totalTimeMs": 389934,
+      "bestLapMs": 59541,
+      "bestLap": 5,
+      "lapsCompleted": 6,
+      "totalLaps": 6,
+      "fuelUse": true,
+      "fuelBurned": 130.393,
+      "fuelCapacity": 100,
+      "fuelByStint": [
+        73.825,
+        56.568
+      ],
+      "pitStops": 1,
+      "drivingMs": 390108,
+      "pausedMs": 2052,
+      "cardPostedAt": "2026-10-18T13:28:03.250Z"
+    }
+  ],
+  "options": {
+    "track": [
+      {
+        "value": "Suzuka Circuit East Course",
+        "count": 1
+      },
+      {
+        "value": "Unknown track"
+      }
+    ],
+    "car": [
+      {
+        "value": "Honda Civic Si Group A version '87",
+        "count": 1
+      }
+    ],
+    "kind": [
+      {
+        "value": "lap_race",
+        "label": "lap race",
+        "count": 1
+      },
+      {
+        "value": "ranked",
+        "label": "qualifying or practice"
+      },
+      {
+        "value": "solo_timed",
+        "label": "time trial or practice"
+      }
+    ]
+  },
+  "total": 14,
+  "matched": 1
+}

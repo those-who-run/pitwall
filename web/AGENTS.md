@@ -90,9 +90,13 @@ From ADR 0003 point 3, both enforced:
 The API is `twr.pitwall.v1.PitwallService` in `contracts`
 (those-who-run/paddock#127). `buf.gen.yaml` pins the `contracts` tag, and `npm
 run api` (`scripts/contracts.ts`) writes `src/api/gen/` from it: protobuf-es
-v2's messages, service and JSON types, and `format-cases.json` from the same
-tag. `src/api/client.ts` speaks Connect's GET over `fetch`, typed by the JSON
-types alone, so no protobuf runtime is bundled. Never edit `src/api/gen/` by hand: bump
+v2's messages, service and JSON types, `format-cases.json` and contracts'
+examples of the API's answers (`examples/`, which `adapt.test.ts` reads) from
+the same tag. The tag must be the contracts version `../go.mod` requires;
+Renovate bumps both in one PR, and the check fails while they differ.
+`src/api/client.ts` speaks Connect's GET over `fetch`, its methods typed by the
+generated service and JSON types, with only types imported, so no protobuf
+runtime is bundled (the maintainer's decision, 2026-10-31). Never edit `src/api/gen/` by hand: bump
 the tag (Renovate does) and run `npm run api`; `make web-check` fails while it
 is stale. The pages read the shapes in `src/api/adapt.ts`, v1's snake_case
 fields, which the hooks map the generated messages to.

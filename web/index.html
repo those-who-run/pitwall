@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- viewport-fit=cover: from the home screen the app draws under the notch and the
+         home indicator, and the shell keeps clear of them with env(safe-area-inset-*). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- Dark only (ADR 0004 point 2): the brand's deep black, before the CSS arrives. -->
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#111111" />
+    <!-- Barlow regular, which body text needs first: the same file the CSS loads. -->
+    <link
+      rel="preload"
+      href="/node_modules/@fontsource/barlow/files/barlow-latin-400-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- Add to Home Screen on iOS (#296 R8): the name under the icon, and the status
+         bar drawn over the header, which pads itself below it. -->
+    <meta name="apple-mobile-web-app-title" content="Pit wall" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Pit wall</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

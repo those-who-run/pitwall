@@ -50,20 +50,21 @@ not in your checkout, follow the rule anyway.
   `npm install` to set up). `make web-check` does both and fails when Node is
   missing or is another version.
 - `make web-check` runs, in order: ESLint (`npm run lint`), `tsc` (`npm run
-  typecheck`), the API client freshness check (`npm run api:check`), Vitest
+  typecheck`), the generated client's freshness check against contracts (`npm
+  run api:check`, which needs the network), Vitest
   (`npm test`), the build and the bundle budget (`npm run budget`, limits in
   `bundle-budget.json`). `make check` at the root runs it too, and CI's `web`
   job runs it.
 - Playwright (`e2e/`, the browser check) is off until those-who-run/paddock#130
   brings it back over v2's pit wall: its specs ran against v1's Python server.
-- `make web-dev` serves the app on http://localhost:5173 with `/api` proxied
+- `make web-dev` serves the app on http://localhost:5173 with the API proxied
   to a local pit wall.
 
 ## Layout of `src/`
 
 | Folder | Holds |
 |---|---|
-| `api/` | The generated client (`client.ts`), its TanStack Query hooks (`hooks.ts`) and the generated types (`schema.d.ts`). The only place that talks to the server. |
+| `api/` | The Connect client (`client.ts`), its TanStack Query hooks (`hooks.ts`), the adapter from the generated messages to the pages' shapes (`adapt.ts`), the code generated from contracts (`gen/`), and the tests' fake API (`testing.ts`). The only place that talks to the server. |
 | `app/` | The shell: header, navigation, the engine and live chips, route errors. |
 | `routes/` | One module per page, each loaded lazily as its own chunk; the table is `routes.ts`. |
 | `components/` | Our kit components (`LapTime`, `Gap`, `Position`, `StatTile`, `EmptyState`, …) and the shadcn/ui primitives in `components/ui/`. |
@@ -86,11 +87,15 @@ From ADR 0003 point 3, both enforced:
 
 ## The API contract
 
-`openapi.json` is v1's API schema, written from v1's Python models and
-committed here as it was; it stays until those-who-run/paddock#127 moves the
-client to the Connect API in `contracts`. `npm run api` regenerates
-`src/api/schema.d.ts` from it. Never edit either file by hand; `make
-web-check` fails when `schema.d.ts` is stale.
+The API is `twr.pitwall.v1.PitwallService` in `contracts`
+(those-who-run/paddock#127). `buf.gen.yaml` pins the `contracts` tag, and `npm
+run api` (`scripts/contracts.ts`) writes `src/api/gen/` from it: protobuf-es
+v2's messages, service and JSON types, and `format-cases.json` from the same
+tag. `src/api/client.ts` speaks Connect's GET over `fetch`, typed by the JSON
+types alone, so no protobuf runtime is bundled. Never edit `src/api/gen/` by hand: bump
+the tag (Renovate does) and run `npm run api`; `make web-check` fails while it
+is stale. The pages read the shapes in `src/api/adapt.ts`, v1's snake_case
+fields, which the hooks map the generated messages to.
 
 ## Design language
 
@@ -104,7 +109,8 @@ web-check` fails when `schema.d.ts` is stale.
   into the kit first, with all its states, and is shown on `/_kit`
   (`src/kit/`, `src/routes/kit.tsx`).
 - **Numbers become text only in `src/lib/format.ts`.** Its cases are
-  `tests/fixtures/format-cases.json`, checked by Vitest. The page
+  contracts' `format/format-cases.json` at the pinned tag
+  (`src/api/gen/format-cases.json`), checked by Vitest. The page
   never shows `null`, `NaN`, `undefined` or a bare 0 for unknown.
 - **Five designed states** for every data view: loading, empty, error, unknown
   and live (ADR 0004 point 9).

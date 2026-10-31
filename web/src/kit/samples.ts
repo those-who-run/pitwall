@@ -2,10 +2,8 @@
 // the kit's build before it breaks a page. Track and car names are real, copied from
 // the engineer's store on 2026-10-18 as plain strings, so the kit shows what long names
 // do at 390 px.
-import type { components } from "@/api/schema";
+import type { EngineStatus, LapRow, LiveSession, Session } from "@/api/hooks";
 
-type Session = components["schemas"]["Session"];
-type LapRow = components["schemas"]["LapRow"];
 
 /** The kit's "now", so its dates read the same in every screenshot: Sun 18 Oct 2026,
  * 21:00 in Dublin. */
@@ -167,7 +165,6 @@ function lap(over: Partial<LapRow> & Pick<LapRow, "lap">): LapRow {
     fuel_used: null,
     position: null,
     frames: 5_400,
-    file: `lap-${String(over.lap).padStart(3, "0")}.parquet`,
     top_speed_kph: null,
     pit: false,
     out_lap: false,
@@ -200,8 +197,6 @@ export const LAPS: LapRow[] = [
   }),
 ];
 
-type EngineStatus = components["schemas"]["EngineStatus"];
-type LiveSession = components["schemas"]["LiveSession"];
 
 /** The kit's pit wall version, and the engineer's when the two match. */
 export const KIT_VERSION = "0.7.1";

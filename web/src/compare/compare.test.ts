@@ -20,7 +20,6 @@ function lap(n: number, time_ms: number | null, extra: Partial<LapRow> = {}): La
     fuel_used: null,
     position: null,
     frames: 100,
-    file: `lap-0${n}.parquet`,
     top_speed_kph: null,
     pit: false,
     out_lap: false,

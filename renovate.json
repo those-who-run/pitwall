@@ -1,4 +1,13 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>those-who-run/.github#v0.2.15"]
+  "extends": ["github>those-who-run/.github#v0.2.15"],
+  "customManagers": [
+    {
+      "description": "The contracts tag web/buf.gen.yaml generates the web app's client from (those-who-run/paddock#127). A bump PR also needs `npm run api` in web/: its CI fails on the stale client until then.",
+      "customType": "regex",
+      "managerFilePatterns": ["/^web/buf\\.gen\\.yaml$/"],
+      "matchStrings": ["git_repo: https://github\\.com/(?<depName>those-who-run/contracts)\\.git\\s+tag: (?<currentValue>v\\d+\\.\\d+\\.\\d+)"],
+      "datasourceTemplate": "github-tags"
+    }
+  ]
 }

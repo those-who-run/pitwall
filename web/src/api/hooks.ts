@@ -1,11 +1,30 @@
-// TanStack Query hooks over the generated client: how every component reads data.
-// A page that needs a new route adds a hook here, not a fetch of its own.
+// TanStack Query hooks over the generated Connect client: how every component
+// reads data. A page that needs a new method adds a hook here, not a fetch of its
+// own. Each hook maps the generated messages to the pages' shapes (./adapt.ts).
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
-import { ApiError, client, unwrap, type EngineStatus } from "./client";
+import * as adapt from "./adapt";
+import type { EngineStatus } from "./adapt";
+import { ApiError, client, health } from "./client";
 
 export { ApiError } from "./client";
-export type { EngineStatus, Health, LapRow, Session, Trace } from "./client";
+export type {
+  EngineActivity,
+  EngineStatus,
+  FilterOption,
+  FilterOptions,
+  Health,
+  KindOption,
+  LapList,
+  LapRow,
+  LiveSession,
+  Session,
+  SessionList,
+  TelemetryLink,
+  Trace,
+  Track,
+  TrackSeen,
+} from "./adapt";
 
 export const queryKeys = {
   sessions: ["sessions"] as const,
@@ -42,14 +61,20 @@ function viewerZone(): string | undefined {
 }
 
 /** The sessions that match `filters`, newest first, with the filters' options and
- * counts (`GET /api/v1/sessions`, #318). Asked again every 5 s while `live`, and
+ * counts (ListSessions, v1's `GET /api/v1/sessions`, #318). Asked again every 5 s while `live`, and
  * otherwise only when the tab regains focus; a new filter keeps the old list on
  * screen until its answer is in. */
 export function useSessionList(filters: SessionFilters, { live = false }: { live?: boolean } = {}) {
   const query = { ...filters, tz: viewerZone() };
   return useQuery({
     queryKey: [...queryKeys.sessions, "list", query] as const,
-    queryFn: async ({ signal }) => unwrap(await client.GET("/api/v1/sessions", { params: { query }, signal })),
+    queryFn: async ({ signal }) =>
+      adapt.sessionList(
+        await client.listSessions(
+          { track: query.track, car: query.car, kind: query.kind, fromDay: query.from, toDay: query.to, timeZone: query.tz },
+          signal,
+        ),
+      ),
     placeholderData: keepPreviousData,
     refetchInterval: live ? LIVE_POLL_MS : false,
     refetchIntervalInBackground: false,
@@ -68,12 +93,20 @@ function sessionQuery(live: boolean) {
   };
 }
 
-/** One session (`GET /api/v1/sessions/{id}`), polled while `live`. */
+/** One session (GetSession), or a 404 ApiError when the pit wall has none. */
+async function getSession(id: string, signal: AbortSignal) {
+  const { session } = await client.getSession({ sessionId: id }, signal);
+  if (!session) {
+    throw new ApiError(404, "no such session");
+  }
+  return adapt.session(session);
+}
+
+/** One session (GetSession, v1's `GET /api/v1/sessions/{id}`), polled while `live`. */
 export function useSession(id: string, { live = false }: { live?: boolean } = {}) {
   return useQuery({
     queryKey: queryKeys.session(id),
-    queryFn: async ({ signal }) =>
-      unwrap(await client.GET("/api/v1/sessions/{id}", { params: { path: { id } }, signal })),
+    queryFn: ({ signal }) => getSession(id, signal),
     ...sessionQuery(live),
   });
 }
@@ -85,32 +118,31 @@ export function useSession(id: string, { live = false }: { live?: boolean } = {}
 export function useLiveSession(id: string | null) {
   return useQuery({
     queryKey: queryKeys.session(id ?? ""),
-    queryFn: async ({ signal }) =>
-      unwrap(await client.GET("/api/v1/sessions/{id}", { params: { path: { id: id ?? "" } }, signal })),
+    queryFn: ({ signal }) => getSession(id ?? "", signal),
     enabled: id !== null,
     ...sessionQuery(true),
   });
 }
 
-/** A session's lap table (`GET /api/v1/sessions/{id}/laps`), polled while `live`. */
+/** A session's lap table (ListLaps, v1's `GET /api/v1/sessions/{id}/laps`),
+ * polled while `live`. */
 export function useLaps(id: string, { live = false }: { live?: boolean } = {}) {
   return useQuery({
     queryKey: queryKeys.laps(id),
-    queryFn: async ({ signal }) =>
-      unwrap(await client.GET("/api/v1/sessions/{id}/laps", { params: { path: { id } }, signal })),
+    queryFn: async ({ signal }) => adapt.lapList(await client.listLaps({ sessionId: id }, signal)),
     ...sessionQuery(live),
   });
 }
 
 /** How often the live chip asks after the engineer while the tab is visible (#296 R2). */
 export const ENGINE_POLL_MS = 5_000;
-/** How long one ask may take before the engineer counts as offline. The pit wall's
- * proxy answers a 502 within 2 s when the engineer is down (#236 R5), so this only
- * catches a pit wall that is itself slow to answer. */
+/** How long one ask may take before the engineer counts as offline. The pit wall
+ * answers from the live KV at once, offline included (those-who-run/paddock#125),
+ * so this only catches a pit wall that is itself slow to answer. */
 export const ENGINE_TIMEOUT_MS = 3_000;
 
-/** What the shell knows about the engineer: still asking, not answering (a 502, a
- * timeout, the pit wall out of reach), or its status. */
+/** What the shell knows about the engineer: still asking, not answering (the pit
+ * wall says offline, a timeout, the pit wall out of reach), or its status. */
 export type EngineView = { state: "checking" } | { state: "offline" } | { state: "online"; status: EngineStatus };
 
 /** `signal`, also aborted after `ms`. */
@@ -127,15 +159,18 @@ function withTimeout(signal: AbortSignal, ms: number): AbortSignal {
   return controller.signal;
 }
 
-/** The engineer, right now (`GET /api/engine/status`: #292 through the proxy).
+/** The engineer, right now (GetEngineStatus, from the live KV; v1's
+ * `GET /api/engine/status`).
  * Asked every 5 s while the tab is visible, not at all while it is hidden, and
  * again as soon as it is shown. Any failure is "offline", never an error: an
  * engineer that is down never blocks a page (ADR 0004 point 9). */
 export function useEngineStatus(): EngineView {
   const query = useQuery({
     queryKey: queryKeys.engineStatus,
-    queryFn: async ({ signal }) =>
-      unwrap(await client.GET("/api/engine/status", { signal: withTimeout(signal, ENGINE_TIMEOUT_MS) })),
+    queryFn: async ({ signal }) => {
+      const { status } = await client.getEngineStatus({}, withTimeout(signal, ENGINE_TIMEOUT_MS));
+      return adapt.engineStatus(status);
+    },
     refetchInterval: ENGINE_POLL_MS,
     refetchIntervalInBackground: false,
     staleTime: 0,
@@ -149,7 +184,7 @@ export function useEngineStatus(): EngineView {
   if (query.status === "pending") {
     return { state: "checking" };
   }
-  return { state: "online", status: query.data };
+  return query.data === null ? { state: "offline" } : { state: "online", status: query.data };
 }
 
 /** The pit wall's own health and version (`GET /healthz`). Unhealthy (a 503) has
@@ -157,21 +192,20 @@ export function useEngineStatus(): EngineView {
 export function useHealth() {
   return useQuery({
     queryKey: queryKeys.health,
-    queryFn: async ({ signal }) => {
-      const { data, error, response } = await client.GET("/healthz", { signal });
-      return unwrap({ data: data ?? error, response });
-    },
+    queryFn: ({ signal }) => health(signal),
     staleTime: 60_000,
   });
 }
 
 /** Other sessions at this one's track, by a sure track id, newest first
- * (`GET /api/v1/sessions/{id}/same-track`, #236 R1b). */
+ * (ListSameTrack, v1's `GET /api/v1/sessions/{id}/same-track`, #236 R1b). */
 export function useSameTrack(id: string) {
   return useQuery({
     queryKey: queryKeys.sameTrack(id),
-    queryFn: async ({ signal }) =>
-      unwrap(await client.GET("/api/v1/sessions/{id}/same-track", { params: { path: { id } }, signal })),
+    queryFn: async ({ signal }) => {
+      const { sessions } = await client.listSameTrack({ sessionId: id }, signal);
+      return { sessions: (sessions ?? []).map(adapt.session) };
+    },
   });
 }
 
@@ -179,19 +213,16 @@ export function useSameTrack(id: string) {
 export const TRACE_MAX_POINTS = 1_500;
 
 /** One lap's channels against time, thinned to `points` (at most TRACE_MAX_POINTS)
- * (`GET /api/v1/sessions/{id}/laps/{lap}/trace`, #236). A lap file that is missing or
+ * (GetTrace, v1's `GET /api/v1/sessions/{id}/laps/{lap}/trace`, #236). A lap file that is missing or
  * still being written is a 404, which is not worth retrying. `lap` null asks nothing. */
 export function useTrace(id: string, lap: number | null, points: number) {
   const n = Math.max(1, Math.min(TRACE_MAX_POINTS, Math.round(points)));
   return useQuery({
     queryKey: queryKeys.trace(id, lap ?? -1, n),
-    queryFn: async ({ signal }) =>
-      unwrap(
-        await client.GET("/api/v1/sessions/{id}/laps/{lap}/trace", {
-          params: { path: { id, lap: lap ?? 0 }, query: { points: n } },
-          signal,
-        }),
-      ),
+    queryFn: async ({ signal }) => {
+      const { trace } = await client.getTrace({ sessionId: id, lap: lap ?? 0, points: n }, signal);
+      return adapt.trace(trace, id, lap ?? 0);
+    },
     enabled: lap !== null && id !== "",
     retry: (count, error) => !isNotFound(error) && count < 1,
     // A closed lap's trace never changes; the ETag makes a repeat a 304 anyway.

@@ -89,7 +89,7 @@ const CHIPS: [string, EngineView, string | null][] = [
   ["in the menus", online(engine({ telemetry: { connected: true, last_packet_age_s: 0.1 } })), KIT_VERSION],
   ["offline", { state: "offline" }, KIT_VERSION],
   ["checking", { state: "checking" }, null],
-  ["deploy rolling out", online(engine({ version: "0.7.0" })), KIT_VERSION],
+  ["voice unknown", online(engine({ voice_connected: null })), KIT_VERSION],
 ];
 
 /** Two sections, so the navigation shows: the first is this page. */

@@ -125,9 +125,10 @@ cache works.
   detector is sure, the lap flags from `ecu`'s pit roles, `ecu`'s best lap, the
   restart laps from the session's gaps, the position only in a field GT7 flags.
 - **The card's words.** A session's `title`, `result` and `kind_label` are the
-  results card's. They come from `contracts`' `format` package once a
-  `contracts` release has its card builder; until then the pit wall writes a
-  stand-in (`internal/api/card.go`).
+  results card's, from `contracts`' `format` package (`Title`, `Result`,
+  `KindLabel`), which `podium`'s card calls too, so the page and the card never
+  name a session differently. The track's name and `position_shown` come from
+  the same package.
 - **ETags.** Every data answer carries a weak `ETag` holding `logbook`'s
   `data_version` and `Cache-Control: no-cache`. A GET with that ETag in
   `If-None-Match` passes the version to `logbook` as `known_data_version`, which

@@ -79,9 +79,11 @@ func newRig(t *testing.T, timeout time.Duration) *rig {
 	return &rig{logbook: fake, nc: nc, url: hs.URL, client: client, server: &s}
 }
 
-// ignoreCardText leaves out the card's words, which come from contracts' format
-// once it has them (card.go's TODO).
-var ignoreCardText = protocmp.IgnoreFields(&pitwallv1.Session{}, "title", "result", "kind_label")
+// ignoreCardText leaves out the result line: contracts' example writes a
+// finished race's without the card's 🚩, which format.Result (and v1's card)
+// puts before it. The title and kind label are compared, and the result is
+// checked against the shared "cards" cases (TestTheCardsWordsAreTheSharedCases).
+var ignoreCardText = protocmp.IgnoreFields(&pitwallv1.Session{}, "result")
 
 func diff(want, got proto.Message, opts ...cmp.Option) string {
 	return cmp.Diff(want, got, append([]cmp.Option{protocmp.Transform()}, opts...)...)

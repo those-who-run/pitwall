@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/those-who-run/contracts/format"
 	eventsv1 "github.com/those-who-run/contracts/gen/go/twr/events/v1"
 	pitwallv1 "github.com/those-who-run/contracts/gen/go/twr/pitwall/v1"
 	storev1 "github.com/those-who-run/contracts/gen/go/twr/store/v1"
@@ -103,27 +104,6 @@ func sure(t *eventsv1.TrackVerdict) bool {
 	return c == eventsv1.TrackConfidence_TRACK_CONFIDENCE_PROBABLE || c == eventsv1.TrackConfidence_TRACK_CONFIDENCE_CONFIRMED
 }
 
-// trackLabel is the track's name to show (v1's results.track_label): the name
-// when the detector is sure, else the family it narrowed it to, else
-// UnknownTrack.
-func trackLabel(t *eventsv1.TrackVerdict) string {
-	switch {
-	case t == nil:
-		return UnknownTrack
-	case sure(t) && t.GetName() != "":
-		return t.GetName()
-	case t.GetFamily() != "":
-		return t.GetFamily()
-	}
-	return UnknownTrack
-}
-
-// positionShown is whether a position means anything: a field GT7 flags (v1's
-// results.position_shown).
-func positionShown(k *eventsv1.SessionKind) bool {
-	return k.GetField() && k.GetCarsOnTrack()
-}
-
 // restartLaps are the laps an engineer restart fell in (v1's restart_laps).
 func restartLaps(s *eventsv1.SessionSummary) []int32 {
 	var laps []int32
@@ -168,14 +148,14 @@ func Session(row *storev1.SessionRow) *pitwallv1.Session {
 		Closed:    closed,
 		Kind:      key,
 		Track: &pitwallv1.Track{
-			Name: trackLabel(track),
+			Name: format.TrackLabel(track),
 			Sure: sure(track),
 		},
 		CarCode:       positive(s.GetCarCode()),
 		Finished:      s.GetFinished(),
 		FinalPosition: s.FinalPosition,
 		TotalCars:     s.TotalCars,
-		PositionShown: positionShown(kind),
+		PositionShown: format.PositionShown(kind),
 		TotalTimeMs:   s.TotalTimeMs,
 		BestLapMs:     s.BestLapTimeMs,
 		BestLap:       s.BestLap,
@@ -245,7 +225,7 @@ func Sessions(rows []*storev1.SessionRow) []*pitwallv1.Session {
 func Laps(row *storev1.SessionRow, laps []*storev1.LapRow) []*pitwallv1.LapRow {
 	s := summary(row)
 	fuelOff := s.GetKind().GetFuelUse() == eventsv1.FuelUse_FUEL_USE_OFF
-	showPosition := positionShown(s.GetKind())
+	showPosition := format.PositionShown(s.GetKind())
 	restarts := restartLaps(s)
 	out := make([]*pitwallv1.LapRow, 0, len(laps))
 	for _, l := range laps {

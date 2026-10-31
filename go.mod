@@ -8,7 +8,7 @@ require (
 	connectrpc.com/connect/v2 v2.0.1
 	github.com/google/go-cmp v0.7.0
 	github.com/nats-io/nats.go v1.54.0
-	github.com/those-who-run/contracts v0.2.7
+	github.com/those-who-run/contracts v0.2.8
 	google.golang.org/protobuf v1.36.12
 )
 

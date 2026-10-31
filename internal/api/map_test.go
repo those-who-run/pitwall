@@ -1,11 +1,15 @@
 package api
 
 import (
+	"encoding/json"
+	"errors"
 	"testing"
 
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/those-who-run/contracts/format"
 	eventsv1 "github.com/those-who-run/contracts/gen/go/twr/events/v1"
 	pitwallv1 "github.com/those-who-run/contracts/gen/go/twr/pitwall/v1"
 	storev1 "github.com/those-who-run/contracts/gen/go/twr/store/v1"
@@ -99,11 +103,8 @@ func TestAnOpenSessionHasWhatItHasSoFar(t *testing.T) {
 	if !got.GetContinued() || len(got.GetRestartLaps()) != 1 || got.GetRestartLaps()[0] != 3 {
 		t.Errorf("restarts: %v", got)
 	}
-	if got.GetResult() != "1 lap" {
-		t.Errorf("result %q", got.GetResult())
-	}
-	if lapsText(3) != "3 laps" {
-		t.Error("lapsText(3)")
+	if got.GetResult() != "Retired on lap 2 of 6" || got.GetTitle() != "Unknown track · 6-lap race" || got.GetKindLabel() != "6-lap race" {
+		t.Errorf("card words %q, %q, %q", got.GetTitle(), got.GetResult(), got.GetKindLabel())
 	}
 }
 
@@ -171,5 +172,66 @@ func TestFilterOptionsAreNamedAndOrdered(t *testing.T) {
 	}
 	if kindOrder("sprint") != len(kindLabels) {
 		t.Error("a key not listed goes last")
+	}
+}
+
+// The card's words are contracts' format package's, checked here against the
+// shared "cards" cases of format-cases.json through the API's mapping: a row
+// with the case's summary, end reason, closed and last lap gives the case's
+// title, result or kind label.
+func TestTheCardsWordsAreTheSharedCases(t *testing.T) {
+	var file struct {
+		Cards struct {
+			Cases []struct {
+				Fn   string            `json:"fn"`
+				Args []json.RawMessage `json:"args"`
+				Out  string            `json:"out"`
+			} `json:"cases"`
+		} `json:"cards"`
+	}
+	if err := json.Unmarshal(format.Cases(), &file); err != nil {
+		t.Fatal(err)
+	}
+	if len(file.Cards.Cases) == 0 {
+		t.Fatal("format-cases.json has no cards cases")
+	}
+	for i, c := range file.Cards.Cases {
+		row := &storev1.SessionRow{SessionId: "s", Closed: true, Summary: &eventsv1.SessionSummary{}}
+		var got string
+		switch c.Fn {
+		case "title", "result":
+			if err := protojson.Unmarshal(c.Args[0], row.Summary); err != nil {
+				t.Fatalf("case %d: %v", i, err)
+			}
+			if c.Fn == "result" {
+				var reason string
+				var lastLap *int32
+				if err := errors.Join(json.Unmarshal(c.Args[1], &reason), json.Unmarshal(c.Args[2], &row.Closed),
+					json.Unmarshal(c.Args[3], &lastLap)); err != nil {
+					t.Fatalf("case %d: %v", i, err)
+				}
+				row.EndReason = eventsv1.EndReason(eventsv1.EndReason_value[reason])
+				row.LastLap = lastLap
+				got = Session(row).GetResult()
+			} else {
+				got = Session(row).GetTitle()
+			}
+		case "kindLabel":
+			var kind string
+			var laps int32
+			if err := errors.Join(json.Unmarshal(c.Args[0], &kind), json.Unmarshal(c.Args[1], &laps)); err != nil {
+				t.Fatalf("case %d: %v", i, err)
+			}
+			row.Summary.Kind = &eventsv1.SessionKind{SessionType: eventsv1.SessionType(eventsv1.SessionType_value[kind])}
+			if laps > 0 {
+				row.Summary.TotalLaps = &laps
+			}
+			got = Session(row).GetKindLabel()
+		default:
+			t.Fatalf("case %d: no fn %q", i, c.Fn)
+		}
+		if got != c.Out {
+			t.Errorf("case %d, %s(%s): %q, want %q", i, c.Fn, c.Args, got, c.Out)
+		}
 	}
 }

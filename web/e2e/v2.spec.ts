@@ -3,7 +3,7 @@
 // wall's ETags, and ecu's own state at the end of a replay.
 import { expectAccessible } from "./a11y";
 import { writeLive } from "./engineer";
-import { apiSession, apiSessions, connectCall, expect, storeUrl, test } from "./pitwall";
+import { apiSession, apiSessions, connectCall, connectPath, expect, storeUrl, test } from "./pitwall";
 import { MANIFEST, SESSION } from "./store";
 
 const PIT_STOP = "Suzuka Circuit East Course · 6-lap race";
@@ -16,12 +16,24 @@ test("a second visit to a session page within 5 s gets 304s for its data calls (
   await page.goto(`/sessions/${s!.session_id}`);
   await expect(page.locator("tbody tr[data-lap]")).toHaveCount(6);
 
-  // The network log of the second visit: each data call's status.
+  // The network log of the second visit: each data call's status as it came over
+  // the wire. Chromium hands the page a revalidated answer as the cached 200, and
+  // Playwright's response events report that; the DevTools protocol's extra info
+  // has the pit wall's own status line, the 304 DevTools shows.
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Network.enable");
+  const methods = new Map<string, string>();
   const statuses: Record<string, number[]> = {};
-  page.on("response", (r) => {
-    const call = connectCall(r.url());
+  cdp.on("Network.requestWillBeSent", (e) => {
+    const call = connectCall(e.request.url);
     if (call && call.method !== "GetEngineStatus") {
-      (statuses[call.method] ??= []).push(r.status());
+      methods.set(e.requestId, call.method);
+    }
+  });
+  cdp.on("Network.responseReceivedExtraInfo", (e) => {
+    const method = methods.get(e.requestId);
+    if (method) {
+      (statuses[method] ??= []).push(e.statusCode);
     }
   });
   const start = Date.now();
@@ -33,7 +45,7 @@ test("a second visit to a session page within 5 s gets 304s for its data calls (
   await expect.poll(() => statuses.ListLaps).toEqual([304]);
 });
 
-test("after a replay through ecu: the chip says Idle and the session is closed (paddock#125 AC5)", async ({
+test("after a replay through ecu: the engineer is idle and the session is closed (paddock#125 AC5)", async ({
   page,
 }, testInfo) => {
   // What ecu left in the live bucket under the replay's own source once its last
@@ -54,8 +66,14 @@ test("after a replay through ecu: the chip says Idle and the session is closed (
   const session = await apiSession(page, id, base);
   expect(session.closed).toBe(true);
   expect(session.ended_at).not.toBeNull();
+  // The status route's answer: idle, with no session.
+  const status = await page.request.get(`${base}${connectPath("GetEngineStatus")}`);
+  expect(await status.json()).toMatchObject({ status: { activity: "ACTIVITY_IDLE" } });
+  expect((await status.json()).status.session).toBeUndefined();
   await page.goto(`${base}/sessions/${id}`);
-  await expect(page.getByRole("banner").locator("[data-slot=live-chip]")).toHaveText("Idle");
+  // Idle, with the replay's telemetry still connected as ecu left it: the chip's
+  // name for that is "In the menus".
+  await expect(page.getByRole("banner").locator("[data-slot=live-chip]")).toHaveText("In the menus");
   await expect(page.locator("[data-slot=session-hero] [data-slot=live-badge]")).toHaveCount(0);
   await expect(page.locator("tr[data-in-progress]")).toHaveCount(0);
   await expectAccessible(page, testInfo, "session-after-replay");

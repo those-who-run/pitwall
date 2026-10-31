@@ -8,6 +8,8 @@ package api
 
 import (
 	"context"
+	"slices"
+	"strings"
 	"time"
 
 	connect "connectrpc.com/connect/v2"
@@ -40,7 +42,10 @@ type Server struct {
 	store   store
 	sources []string
 	version string
-	engine  Engine
+	// etagScope is what every ETag's key starts from besides the request: the
+	// pit wall's version and the sources it shows, sorted.
+	etagScope string
+	engine    Engine
 }
 
 // New is the service over logbook, reached through nc, for the sources in
@@ -52,11 +57,20 @@ func New(nc Requester, sources []string, version string, engine Engine, timeout 
 		timeout = StoreTimeout
 	}
 	return &Server{
-		store:   store{nc: nc, timeout: timeout},
-		sources: sources,
-		version: version,
-		engine:  engine,
+		store:     store{nc: nc, timeout: timeout},
+		sources:   sources,
+		version:   version,
+		etagScope: etagScope(version, sources),
+		engine:    engine,
 	}
+}
+
+// etagScope is the pit wall's version and its sources, sorted, so a pit wall
+// showing other sources (TWR_PITWALL_SRC) never answers 304 for a body built
+// from another set, whatever their order.
+func etagScope(version string, sources []string) string {
+	sorted := slices.Sorted(slices.Values(sources))
+	return version + "\x00" + strings.Join(sorted, ",")
 }
 
 // Register registers the service on server.
@@ -115,7 +129,7 @@ func (s *Server) ListSessions(ctx context.Context, req *pitwallv1.ListSessionsRe
 	if err != nil {
 		return nil, err
 	}
-	v := newView(ctx, s.version, pitwallv1connect.PitwallServiceListSessionsProcedure, req)
+	v := newView(ctx, s.etagScope, pitwallv1connect.PitwallServiceListSessionsProcedure, req)
 	rows, first, err := collect(func(offset int32, known *string) (*storev1.ListSessionsResponse, error) {
 		want.Offset, want.KnownDataVersion = offset, known
 		var page storev1.ListSessionsResponse
@@ -190,7 +204,7 @@ func (s *Server) GetSession(ctx context.Context, req *pitwallv1.GetSessionReques
 	if err := needSession(req.GetSessionId()); err != nil {
 		return nil, err
 	}
-	v := newView(ctx, s.version, pitwallv1connect.PitwallServiceGetSessionProcedure, req)
+	v := newView(ctx, s.etagScope, pitwallv1connect.PitwallServiceGetSessionProcedure, req)
 	var resp storev1.GetSessionResponse
 	err := s.store.call(ctx, subjectSessionsGet, &storev1.GetSessionRequest{
 		Sources: s.sources, SessionId: req.GetSessionId(), KnownDataVersion: v.known,
@@ -209,7 +223,7 @@ func (s *Server) ListLaps(ctx context.Context, req *pitwallv1.ListLapsRequest) (
 	if err := needSession(req.GetSessionId()); err != nil {
 		return nil, err
 	}
-	v := newView(ctx, s.version, pitwallv1connect.PitwallServiceListLapsProcedure, req)
+	v := newView(ctx, s.etagScope, pitwallv1connect.PitwallServiceListLapsProcedure, req)
 	var resp storev1.ListLapsResponse
 	err := s.store.call(ctx, subjectLapsList, &storev1.ListLapsRequest{
 		Sources: s.sources, SessionId: req.GetSessionId(), KnownDataVersion: v.known,
@@ -237,7 +251,7 @@ func (s *Server) GetTrace(ctx context.Context, req *pitwallv1.GetTraceRequest) (
 	if p := req.GetPoints(); p < 0 || p > maxPoints {
 		return nil, connect.Errorf(connect.CodeInvalidArgument, "points is from 1 to %d, or 0 for the default", maxPoints)
 	}
-	v := newView(ctx, s.version, pitwallv1connect.PitwallServiceGetTraceProcedure, req)
+	v := newView(ctx, s.etagScope, pitwallv1connect.PitwallServiceGetTraceProcedure, req)
 	var resp storev1.GetTraceResponse
 	err := s.store.call(ctx, subjectLapsTrace, &storev1.GetTraceRequest{
 		Sources: s.sources, SessionId: req.GetSessionId(), Lap: req.GetLap(), Points: req.GetPoints(),
@@ -258,7 +272,7 @@ func (s *Server) ListSameTrack(ctx context.Context, req *pitwallv1.ListSameTrack
 	if err := needSession(req.GetSessionId()); err != nil {
 		return nil, err
 	}
-	v := newView(ctx, s.version, pitwallv1connect.PitwallServiceListSameTrackProcedure, req)
+	v := newView(ctx, s.etagScope, pitwallv1connect.PitwallServiceListSameTrackProcedure, req)
 	want := &storev1.ListSameTrackRequest{Sources: s.sources, SessionId: req.GetSessionId(), Limit: pageLimit}
 	rows, first, err := collect(func(offset int32, known *string) (*storev1.ListSameTrackResponse, error) {
 		want.Offset, want.KnownDataVersion = offset, known

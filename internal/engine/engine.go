@@ -35,7 +35,9 @@ const (
 )
 
 // DefaultStale is how old ecu's status may be before ecu counts as gone: ecu
-// rewrites it every second while idle and at least every 5 s while busy.
+// rewrites it every second while idle and at least every 5 s while busy. radio's
+// status, rewritten at least every 5 s, has the same limit. ecu's session key is
+// written only on a change, so it has none: it holds while ecu's status is fresh.
 const DefaultStale = 15 * time.Second
 
 // retry is how long the watch waits before trying again after it could not
@@ -154,13 +156,22 @@ func (w *Watcher) put(ctx context.Context, e jetstream.KeyValueEntry) {
 	w.values[e.Key()] = entry{msg: msg, at: e.Created()}
 }
 
-// fresh is the key's value while it is younger than the stale limit.
+// fresh is the key's value while it is younger than the stale limit: for the
+// keys rewritten on a heartbeat, ecu.status (every second while idle, at least
+// every 5 s while busy) and radio.status (at least every 5 s).
 func (w *Watcher) fresh(key string) proto.Message {
 	e, ok := w.values[key]
 	if !ok || w.now().Sub(e.at) > w.stale {
 		return nil
 	}
 	return e.msg
+}
+
+// latest is the key's value however old it is: ecu.session, which ecu writes
+// only on a change, so a long lap leaves it unchanged, and deletes when the
+// session ends.
+func (w *Watcher) latest(key string) proto.Message {
+	return w.values[key].msg
 }
 
 // Status is the engineer's status now (api.Engine).
@@ -175,7 +186,9 @@ func (w *Watcher) Status() *pitwallv1.EngineStatus {
 	if ecu == nil {
 		return offline
 	}
-	session, _ := w.fresh(KeyEcuSession).(*statev1.LiveSession)
+	// The session is as old as its last change; ecu's fresh status says ecu is
+	// still there to have deleted it had the session ended.
+	session, _ := w.latest(KeyEcuSession).(*statev1.LiveSession)
 	radio, _ := w.fresh(KeyRadioStatus).(*statev1.RadioStatus)
 	return Status(ecu, session, radio)
 }

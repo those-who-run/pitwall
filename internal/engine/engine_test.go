@@ -158,6 +158,32 @@ func TestAStaleValueIsOffline(t *testing.T) {
 	eventually(t, "back", func() bool { return r.w.Status().GetActivity() == pitwallv1.Activity_ACTIVITY_DRIVING })
 }
 
+// A lap longer than the stale limit leaves ecu's session key unchanged, as ecu
+// writes it only on a change: the session holds while ecu's status is fresh.
+// radio's status, gone quiet, is judged on its own.
+func TestALongLapKeepsItsSession(t *testing.T) {
+	r := start(t, 300*time.Millisecond)
+	ecu, session, radio := driving()
+	r.put(t, KeyEcuSession, session)
+	r.put(t, KeyRadioStatus, radio)
+	r.put(t, KeyEcuStatus, ecu)
+	eventually(t, "driving", func() bool { return proto.Equal(r.w.Status(), want) })
+	// Well past the limit, with only ecu's heartbeat written.
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		r.put(t, KeyEcuStatus, ecu)
+		time.Sleep(50 * time.Millisecond)
+	}
+	eventually(t, "the heartbeat seen", func() bool { return r.w.Status().GetActivity() == pitwallv1.Activity_ACTIVITY_DRIVING })
+	s := r.w.Status()
+	if s.GetSession().GetSessionId() != session.GetSessionId() || s.GetSession().GetLap() != 3 {
+		t.Errorf("a long lap lost its session: %v", s.GetSession())
+	}
+	if s.VoiceConnected != nil {
+		t.Errorf("radio, silent past the limit, still says the voice: %v", s.GetVoiceConnected())
+	}
+}
+
 // AC4: a replay's values leave the answer as it was.
 func TestAReplayNeverShows(t *testing.T) {
 	r := start(t, 0)

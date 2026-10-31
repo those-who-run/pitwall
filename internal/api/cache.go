@@ -21,8 +21,9 @@ const viewKeyLen = 16
 
 // view is one GET of a data method, with what makes its answer a 304. Its ETag is
 // weak (the gzipped and plain bodies are the same resource, as in v1) and
-// carries two parts: a key of the pit wall's version, the procedure and the
-// request, so a new pit wall or another filter never matches an old body; and
+// carries two parts: a key of the pit wall's version and sources (its scope),
+// the procedure and the request, so a new pit wall, another TWR_PITWALL_SRC or
+// another filter never matches an old body; and
 // logbook's data_version for the answer. A browser sending the ETag back hands
 // the pit wall the data_version it has, which goes to logbook as
 // known_data_version, so a 5 s poll costs logbook next to nothing when nothing
@@ -37,7 +38,7 @@ type view struct {
 // newView reads the request's If-None-Match for this procedure and request. A
 // POST, or a call not over HTTP, is never answered 304 and sends no
 // known_data_version.
-func newView(ctx context.Context, version, procedure string, req proto.Message) *view {
+func newView(ctx context.Context, scope, procedure string, req proto.Message) *view {
 	v := &view{}
 	v.info, _ = connect.CallInfoForServerContext(ctx)
 	if server, ok := connecthttp.ServerInfoForContext(ctx); ok {
@@ -46,7 +47,7 @@ func newView(ctx context.Context, version, procedure string, req proto.Message) 
 	// Deterministic, so the same request gives the same key; an error leaves the
 	// key of the procedure alone, which only costs a 304.
 	body, _ := proto.MarshalOptions{Deterministic: true}.Marshal(req)
-	sum := sha256.Sum256([]byte(version + "\x00" + procedure + "\x00" + string(body)))
+	sum := sha256.Sum256([]byte(scope + "\x00" + procedure + "\x00" + string(body)))
 	v.key = hex.EncodeToString(sum[:])[:viewKeyLen]
 	if v.get && v.info != nil {
 		v.known = knownVersion(strings.Join(v.info.RequestHeader().Values("If-None-Match"), ","), v.key)

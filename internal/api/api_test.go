@@ -675,3 +675,20 @@ func TestAnETagHoldsOnlyAVersionItCanCarry(t *testing.T) {
 		t.Errorf("knownVersion = %v, want 5:1", got)
 	}
 }
+
+// The ETag's key holds the sources the pit wall shows, in any order: a pit wall
+// with another TWR_PITWALL_SRC never takes an ETag for its own.
+func TestTheETagKeyHoldsTheSources(t *testing.T) {
+	key := func(sources ...string) string {
+		return newView(context.Background(), etagScope("1.0.0", sources), "/p", &pitwallv1.GetSessionRequest{SessionId: "s"}).key
+	}
+	if key("live", "v1-import") != key("v1-import", "live") {
+		t.Error("the sources' order changes the key")
+	}
+	if key("live", "v1-import") == key("live") || key("live") == key("replay-x") {
+		t.Error("other sources give the same key")
+	}
+	if etagScope("1.0.0", []string{"b", "a"}) != etagScope("1.0.0", []string{"a", "b"}) || etagScope("1.0.0", []string{"a"}) == etagScope("1.0.1", []string{"a"}) {
+		t.Error("etagScope")
+	}
+}

@@ -121,8 +121,9 @@ cache works.
   (`svc.logbook.*`, `twr.store.v1`) for the sources in `TWR_PITWALL_SRC`, and
   maps the answer (decision D6): `logbook` keeps `ecu`'s summary and laps as
   `ecu` published them, and the pit wall works out the names, flags and labels
-  the page shows (`internal/api/map.go`): the track's name only when the
-  detector is sure, the lap flags from `ecu`'s pit roles, `ecu`'s best lap, the
+  the page shows (`internal/api/map.go`): the track's name as the card names it
+  (the layout when the detector is sure, else the circuit, else "Unknown
+  track"), which the track filter takes too, the lap flags from `ecu`'s pit roles, `ecu`'s best lap, the
   restart laps from the session's gaps, the position only in a field GT7 flags.
 - **The card's words.** A session's `title`, `result` and `kind_label` are the
   results card's, from `contracts`' `format` package (`Title`, `Result`,

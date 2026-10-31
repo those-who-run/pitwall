@@ -16,8 +16,10 @@ import (
 // so the names, flags and labels the page shows are worked out here, as v1's
 // pitwall/data.py worked them out from its store.
 
-// UnknownTrack is the track's name when the detector is not sure of it, and the
-// track filter's value for those sessions (logbook's empty track name).
+// UnknownTrack is the track's name when the detector placed it neither by its
+// layout nor by its circuit (format.TrackLabel), and the track filter's value
+// for those sessions: logbook's empty track name. Every other name, a family
+// included, is logbook's as it is (contracts v0.2.9).
 const UnknownTrack = "Unknown track"
 
 // kindPrefix is the prefix a SessionType's name drops to become its key.

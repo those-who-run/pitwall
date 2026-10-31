@@ -25,6 +25,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
+	eventsv1 "github.com/those-who-run/contracts/gen/go/twr/events/v1"
 	pitwallv1 "github.com/those-who-run/contracts/gen/go/twr/pitwall/v1"
 	"github.com/those-who-run/contracts/gen/go/twr/pitwall/v1/pitwallv1connect"
 	storev1 "github.com/those-who-run/contracts/gen/go/twr/store/v1"
@@ -33,7 +34,7 @@ import (
 	"github.com/those-who-run/pitwall/internal/natstest"
 )
 
-// The examples under testdata/contracts are contracts v0.2.7's
+// The examples under testdata/contracts are contracts v0.2.9's
 // examples/store/v1 and examples/pitwall/v1, copied unchanged: one session (the
 // Suzuka East pit-stop race) as logbook answers it and as the API answers it.
 
@@ -79,12 +80,6 @@ func newRig(t *testing.T, timeout time.Duration) *rig {
 	return &rig{logbook: fake, nc: nc, url: hs.URL, client: client, server: &s}
 }
 
-// ignoreCardText leaves out the result line: contracts' example writes a
-// finished race's without the card's 🚩, which format.Result (and v1's card)
-// puts before it. The title and kind label are compared, and the result is
-// checked against the shared "cards" cases (TestTheCardsWordsAreTheSharedCases).
-var ignoreCardText = protocmp.IgnoreFields(&pitwallv1.Session{}, "result")
-
 func diff(want, got proto.Message, opts ...cmp.Option) string {
 	return cmp.Diff(want, got, append([]cmp.Option{protocmp.Transform()}, opts...)...)
 }
@@ -113,7 +108,7 @@ func TestGetSessionMapsLogbooksAnswer(t *testing.T) {
 	}
 	var want pitwallv1.GetSessionResponse
 	load(t, "pitwall/get_session_response", &want)
-	if d := diff(&want, got, ignoreCardText); d != "" {
+	if d := diff(&want, got); d != "" {
 		t.Errorf("GetSession (-want +got):\n%s", d)
 	}
 	var sent storev1.GetSessionRequest
@@ -192,7 +187,7 @@ func TestListSessionsMapsLogbooksAnswer(t *testing.T) {
 	}
 	var want pitwallv1.ListSessionsResponse
 	load(t, "pitwall/list_sessions_response", &want)
-	if d := diff(&want, got, ignoreCardText); d != "" {
+	if d := diff(&want, got); d != "" {
 		t.Errorf("ListSessions (-want +got):\n%s", d)
 	}
 	// contracts' example request, but for the page limit, which is the pit
@@ -219,6 +214,38 @@ func TestListSessionsAsksForUnknownTrackAsTheEmptyName(t *testing.T) {
 	}
 }
 
+// A session whose track the detector placed only by its circuit shows the
+// circuit (format.TrackLabel), and the filter takes that name to logbook as it
+// is, which keys on the same label (contracts v0.2.9): the family-titled
+// session filters under its family. Only "Unknown track" is logbook's "".
+func TestAFamilyTitledSessionFiltersUnderItsFamily(t *testing.T) {
+	r := newRig(t, 0)
+	fuji := &storev1.SessionRow{SessionId: "f", Closed: true, Summary: &eventsv1.SessionSummary{
+		LapsCompleted: 2,
+		Track:         &eventsv1.TrackVerdict{Name: "Fuji Speedway GP", Family: "Fuji", Confidence: eventsv1.TrackConfidence_TRACK_CONFIDENCE_AMBIGUOUS},
+		Kind:          &eventsv1.SessionKind{SessionType: eventsv1.SessionType_SESSION_TYPE_SOLO_TIMED},
+	}}
+	r.logbook.Reply(logbooktest.SessionsList, &storev1.ListSessionsResponse{
+		Sessions: []*storev1.SessionRow{fuji}, Matched: 1, Total: 1, DataVersion: "1",
+		Options: &storev1.FilterCounts{Track: []*storev1.ValueCount{{Value: "Fuji", Count: 1}}},
+	})
+	got, err := r.client.ListSessions(t.Context(), &pitwallv1.ListSessionsRequest{Track: "Fuji"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var sent storev1.ListSessionsRequest
+	lastRequest(t, r, logbooktest.SessionsList, &sent)
+	if sent.Track == nil || sent.GetTrack() != "Fuji" {
+		t.Errorf("logbook was asked for track %v, want Fuji", sent.Track)
+	}
+	if name := got.GetSessions()[0].GetTrack().GetName(); name != "Fuji" || got.GetSessions()[0].GetTitle() != "Fuji · time trial" {
+		t.Errorf("the session's track %q, title %q", name, got.GetSessions()[0].GetTitle())
+	}
+	if opts := got.GetOptions().GetTrack(); len(opts) != 1 || opts[0].GetValue() != "Fuji" {
+		t.Errorf("the track filter's values: %v", opts)
+	}
+}
+
 func TestListSameTrackMapsLogbooksAnswer(t *testing.T) {
 	r := newRig(t, 0)
 	var one storev1.GetSessionResponse
@@ -235,7 +262,7 @@ func TestListSameTrackMapsLogbooksAnswer(t *testing.T) {
 	if len(got.GetSessions()) != 1 {
 		t.Fatalf("got %d sessions, want 1", len(got.GetSessions()))
 	}
-	if d := diff(want.GetSession(), got.GetSessions()[0], ignoreCardText); d != "" {
+	if d := diff(want.GetSession(), got.GetSessions()[0]); d != "" {
 		t.Errorf("ListSameTrack (-want +got):\n%s", d)
 	}
 }

@@ -202,7 +202,9 @@ and no shell. A deployment probes `GET /healthz`, which is 503 when `/web`'s
 
 Every PR builds it and runs `scripts/image_smoke.sh` on it, pushing nothing:
 the version, the non-root user, under 40 MB, no Node or Python, `/healthz`
-answering 200 with the version within 10 s, and `index.html` on `/`. A
+answering 200 with the version within 10 s, `index.html` on `/`, on a
+session's page and on v1's card link `/?session=<id>`, and `GetEngineStatus`
+answering offline over Connect's GET. A
 release tag `vX.Y.Z` builds it again, runs the same smoke test expecting
 `X.Y.Z`, and `image-publish.yml` in `those-who-run/.github` pushes that build
 with its SBOM and provenance, attested. Check an image with:

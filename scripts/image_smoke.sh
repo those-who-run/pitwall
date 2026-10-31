@@ -9,7 +9,9 @@
 # - is under 40 MB;
 # - holds no Node and no Python;
 # - answers GET /healthz 200 within 10 s, ok and with that version;
-# - serves the web app's index.html on /.
+# - serves the web app's index.html on /, on a session's page and on v1's results
+#   card link, /?session=<id>, which the app turns into its session's page;
+# - answers the API: GetEngineStatus over Connect's GET, offline with no NATS.
 set -euo pipefail
 
 want=${1:?usage: image_smoke.sh <version>}
@@ -60,10 +62,24 @@ if ! jq --exit-status --arg want "$want" '.ok == true and .version == $want' <<<
   exit 1
 fi
 
-page=$(curl --fail --silent --show-error http://127.0.0.1:8080/)
-if ! grep -q '<div id="root">' <<<"$page"; then
-  echo "GET / did not serve the web app's index.html:" >&2
-  echo "$page" >&2
+# The page on /, on a client route, and on v1's card link (ADR 0009 and 0011:
+# those links are permanent), each the app's index.html.
+for path in / /sessions/01JB9QZ4V3X8M2K7T5R1N6PDWA '/?session=20261017-162118'; do
+  page=$(curl --fail --silent --show-error "http://127.0.0.1:8080$path")
+  if ! grep -q '<div id="root">' <<<"$page"; then
+    echo "GET $path did not serve the web app's index.html:" >&2
+    echo "$page" >&2
+    exit 1
+  fi
+  echo "GET $path served the web app"
+done
+
+# The API, as the web app calls it. With no NATS the engineer is offline, and the
+# answer is still 200 (paddock#125 R2).
+api=$(curl --fail --silent --show-error \
+  'http://127.0.0.1:8080/twr.pitwall.v1.PitwallService/GetEngineStatus?connect=v1&encoding=json&message=%7B%7D')
+echo "GetEngineStatus: $api"
+if ! jq --exit-status '.status.activity == "ACTIVITY_OFFLINE"' <<<"$api" >/dev/null; then
+  echo "GetEngineStatus did not answer offline" >&2
   exit 1
 fi
-echo "GET / served the web app"

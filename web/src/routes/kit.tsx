@@ -1,7 +1,7 @@
 // /_kit: every component in the kit, in every state (#295, ADR 0004 point 8). It is
 // in production builds but linked from nowhere: it is where the look is reviewed, on
-// the phone and iPad through `make web-preview`, and where CI screenshots and runs
-// axe (web/e2e/kit.spec.ts). A new visual pattern lands here before a page uses it.
+// the phone and iPad (v1's `make web-preview`, back with v2's server), and where CI
+// screenshots and runs axe (web/e2e/kit.spec.ts, back with those-who-run/paddock#130). A new visual pattern lands here before a page uses it.
 // The sample data is web/src/kit/samples.ts.
 import { GaugeIcon, ListIcon } from "lucide-react";
 import { lazy, Suspense, useState, type ReactNode } from "react";

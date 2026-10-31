@@ -23,7 +23,9 @@ not in your checkout, follow the rule anyway.
   [those-who-run/paddock](https://github.com/those-who-run/paddock/issues):
   `gh issue view N -R those-who-run/paddock --comments`. Read the whole issue,
   its comments and its ADRs; find code by symbol, not by line number. Issue
-  numbers in the history from v1 are `those-who-run/those-who-run#N`.
+  numbers in the history from v1 are `those-who-run/those-who-run#N`, and a
+  bare `#N` in code, comments or docs that came from v1 is v1's:
+  those-who-run/those-who-run#N.
 - **Pull requests.** One issue, one PR, a Conventional Commit title (`feat(web):
   …`), the agent's `Co-Authored-By` trailer. `Closes those-who-run/paddock#N.`
   only when every acceptance criterion is met; `Part of

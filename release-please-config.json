@@ -1,6 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
   "release-type": "go",
+  "bootstrap-sha": "958a137d1cad436d24bba35f724a46bc3b7cd133",
   "include-component-in-tag": false,
   "include-v-in-tag": true,
   "include-v-in-release-name": false,

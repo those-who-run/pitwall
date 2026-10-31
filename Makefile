@@ -34,7 +34,7 @@ help:
 	@echo "guard     - .claude/ holds those-who-run/.github's guard and settings at the pinned commit"
 	@echo "web-check - the web app: ESLint, tsc, the API client's freshness, Vitest, the build, the bundle budget (CI's web job)"
 	@echo "web-build - build the web app into web/dist"
-	@echo "web-dev   - Vite's dev server on http://localhost:5173, /api proxied to PITWALL_URL"
+	@echo "web-dev   - Vite's dev server on http://localhost:5173, the API proxied to PITWALL_URL"
 	@echo "web-deps  - install web/node_modules from web/package-lock.json (npm ci)"
 
 # go.yml's order: gofmt, tidy, vet, golangci-lint, the tests, build, govulncheck.
@@ -145,7 +145,7 @@ web-build: web-node $(WEB_DEPS)
 web-dev: web-node $(WEB_DEPS)
 	cd web && npm run dev
 
-# ESLint, tsc, the API client against openapi.json, Vitest, the build (into
+# ESLint, tsc, the generated client against the pinned contracts tag, Vitest, the build (into
 # web/dist) and the bundle budget on it: CI's web job runs this target.
 .PHONY: web-check
 web-check: web-node $(WEB_DEPS)

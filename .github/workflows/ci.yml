@@ -53,8 +53,8 @@ jobs:
       - name: make test
         run: make test
 
-  # The web app, the same `make web-check` a laptop runs: ESLint, tsc, the API client
-  # against openapi.json, Vitest, the build and the bundle budget, on the Node in
+  # The web app, the same `make web-check` a laptop runs: ESLint, tsc, the generated
+  # client against the pinned contracts tag, Vitest, the build and the bundle budget, on the Node in
   # web/.node-version with web/package-lock.json's packages. Playwright comes back
   # with those-who-run/paddock#130.
   web:

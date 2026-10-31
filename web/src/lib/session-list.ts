@@ -1,10 +1,9 @@
 // The session list's logic (#297), apart from its markup so it is tested as plain
 // values: the URL's filters, the days, paging, and the live card's session.
 import type { EngineStatus, SessionFilters } from "@/api/hooks";
-import type { components } from "@/api/schema";
+import type { Session } from "@/api/hooks";
 import { isoDay, sessionDay } from "@/lib/format";
 
-type Session = components["schemas"]["Session"];
 type LiveSession = NonNullable<EngineStatus["session"]>;
 
 /** Cards per page: "Show more" adds as many again (R6). */

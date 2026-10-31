@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 
 import { useEngineStatus, useLiveSession, useSessionList, type SessionFilters } from "@/api/hooks";
-import type { components } from "@/api/schema";
+import type { Session, SessionList } from "@/api/hooks";
 import { usePageTitle } from "@/app/title";
 import { EmptyState } from "@/components/empty-state";
 import { ErrorState } from "@/components/error-state";
@@ -31,8 +31,6 @@ import {
 } from "@/lib/session-list";
 import { cn } from "@/lib/utils";
 
-type Session = components["schemas"]["Session"];
-type SessionList = components["schemas"]["SessionList"];
 
 /** The cards on the page, kept in the history entry rather than the URL, so Back to
  * the list brings back as many as were shown, and the scroll with them (R6). A new

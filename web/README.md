@@ -10,9 +10,10 @@ web/dist` served (v2's server is those-who-run/paddock#124): the session list, t
 and lap compare ([the pit wall guide](../docs/pitwall.md)); a results card's old `/?session=<id>`
 link lands on `/sessions/<id>`.
 
-- **Data** comes only through the client generated from `web/openapi.json` into
-  `web/src/api/schema.d.ts` (`npm run api` in `web/`; v1's schema until those-who-run/paddock#127), and
-  the TanStack Query hooks in `web/src/api/hooks.ts`. ESLint fails `fetch` or
+- **Data** comes only through the Connect client generated from `contracts`
+  at the tag `web/buf.gen.yaml` pins into `web/src/api/gen/` (`npm run api` in
+  `web/`; those-who-run/paddock#127), and the TanStack Query hooks in
+  `web/src/api/hooks.ts`. ESLint fails `fetch` or
   the client anywhere outside `web/src/api/`.
 - **Style comes only from the design tokens** (ADR 0004,
   [`docs/design.md`](../docs/design.md)) in `web/src/styles/`: ESLint fails a
@@ -22,7 +23,7 @@ link lands on `/sessions/<id>`.
   Barlow Semi Condensed) are self-hosted from `@fontsource`; the app is dark
   only.
 - **Numbers become text only in `web/src/lib/format.ts`**, whose cases are
-  `tests/fixtures/format-cases.json`.
+  contracts' `format/format-cases.json` at the pinned tag.
 - **No browser-only code at module top level**: a Vitest test imports every
   route module under Node with no DOM.
 - **Each route is a lazy chunk**, under a gzipped budget in

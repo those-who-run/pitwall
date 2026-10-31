@@ -1,0 +1,26 @@
+{
+  "status": {
+    "version": "0.1.14",
+    "startedAt": "2026-10-18T09:02:41Z",
+    "activity": "ACTIVITY_DRIVING",
+    "telemetry": {
+      "connected": true,
+      "lastPacketAgeSecs": 0
+    },
+    "voiceConnected": true,
+    "session": {
+      "sessionId": "01JB9QZ4V3X8M2K7T5R1N6PDWA",
+      "kind": "lap_race",
+      "track": {
+        "trackId": 442,
+        "name": "Suzuka Circuit East Course",
+        "sure": true
+      },
+      "car": "Honda Civic Si Group A version '87",
+      "lap": 3,
+      "totalLaps": 6,
+      "position": 1,
+      "totalCars": 2
+    }
+  }
+}

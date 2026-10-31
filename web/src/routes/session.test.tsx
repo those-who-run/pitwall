@@ -12,6 +12,7 @@ import { engine, LAPS, liveSession, SESSIONS } from "@/kit/samples";
 import type { RaceStory as RaceStoryChart } from "@/session/race-story";
 
 import { Component } from "./session";
+import { v1Api, v1Url } from "@/api/testing";
 
 // The race story's chart needs a canvas, which jsdom lacks: a stand-in with a
 // button per point, so the page's side of it (when it shows, the picks and the
@@ -69,8 +70,8 @@ interface Api {
 
 /** Answers the API from `api`, which a test may change between asks. */
 function serve(api: Api) {
-  return vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-    const path = new URL((input as Request).url).pathname;
+  return vi.spyOn(globalThis, "fetch").mockImplementation(v1Api(async (input) => {
+    const path = v1Url(input as Request).pathname;
     const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
     const answer = (v: unknown) => {
       const failure = v as { status?: number; error?: string } | undefined;
@@ -84,7 +85,7 @@ function serve(api: Api) {
       return Array.isArray(laps) ? json({ session_id: "x", laps }) : answer(laps);
     }
     return answer(api.session);
-  });
+  }));
 }
 
 function renderAt(url: string) {
@@ -106,7 +107,7 @@ function renderAt(url: string) {
 }
 
 const lapAsks = (fetch: ReturnType<typeof serve>) =>
-  fetch.mock.calls.filter(([r]) => new URL((r as Request).url).pathname.endsWith("/laps")).length;
+  fetch.mock.calls.filter(([r]) => v1Url(r as Request).pathname.endsWith("/laps")).length;
 
 describe("the session page", () => {
   it("leads with the result, then the tiles and the laps (R1, R2, R3)", async () => {

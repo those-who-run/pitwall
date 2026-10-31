@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { engine, liveSession, SESSIONS } from "@/kit/samples";
 import { routes } from "@/routes";
+import { v1Api, v1Url } from "@/api/testing";
 
 const NOW = Date.now() / 1000;
 const list = [
@@ -35,8 +36,8 @@ class PageRequest extends Request {
 /** Answers the list with `body`, and the engineer with `status` (down when null). */
 function answer(body: unknown, status: unknown = null, code = 200) {
   vi.stubGlobal("Request", PageRequest);
-  return vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-    const path = new URL((input as Request).url).pathname;
+  return vi.spyOn(globalThis, "fetch").mockImplementation(v1Api(async (input) => {
+    const path = v1Url(input as Request).pathname;
     if (path === "/api/engine/status") {
       return status
         ? new Response(JSON.stringify(status))
@@ -46,7 +47,7 @@ function answer(body: unknown, status: unknown = null, code = 200) {
       return new Response(JSON.stringify({ ok: true, version: "0.7.1", index: true, engineer: false }));
     }
     return new Response(JSON.stringify(body), { status: code });
-  });
+  }));
 }
 
 function renderAt(url: string) {
@@ -62,7 +63,7 @@ function renderAt(url: string) {
 
 const listCalls = (fetch: ReturnType<typeof answer>) =>
   fetch.mock.calls
-    .map(([r]) => new URL((r as Request).url))
+    .map(([r]) => v1Url(r as Request))
     .filter((u) => u.pathname === "/api/v1/sessions");
 
 describe("the session list", () => {

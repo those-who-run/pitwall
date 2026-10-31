@@ -26,7 +26,11 @@ describe("data goes through src/api/ only", () => {
     ["XMLHttpRequest", "export const x = () => new XMLHttpRequest();", "no-restricted-globals"],
     ["the client", 'import { client } from "@/api/client";\nexport const c = client;', "no-restricted-imports"],
     ["the client, relatively", 'import { client } from "../api/client";\nexport const c = client;', "no-restricted-imports"],
-    ["openapi-fetch", 'import createClient from "openapi-fetch";\nexport const c = createClient;', "no-restricted-imports"],
+    [
+      "the generated code",
+      'import { PitwallService } from "@/api/gen/twr/pitwall/v1/pitwall_pb";\nexport const s = PitwallService;',
+      "no-restricted-imports",
+    ],
   ])("a component that uses %s fails lint", async (_, code, rule) => {
     expect(await errors(code, COMPONENT)).toContain(rule);
   });

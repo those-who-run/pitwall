@@ -24,9 +24,10 @@ vi.hoisted(() => {
 import type { EngineView } from "@/api/hooks";
 import { engine, KIT_VERSION, liveSession, NAMES } from "@/kit/samples";
 
-import { chipLine, chipText, versionsDiffer } from "./engine";
+import { chipLine, chipText } from "./engine";
 import { EngineChip } from "./engine-chip";
 import { LiveChip } from "./live-chip";
+import { v1Api, v1Url } from "@/api/testing";
 
 const online = (over: Parameters<typeof engine>[0] = {}): EngineView => ({ state: "online", status: engine(over) });
 
@@ -138,20 +139,21 @@ describe("the popover (R2, R3, R9)", () => {
     expect(screen.queryByRole("link", { name: "Open the live session" })).toBeNull();
   });
 
-  it("says a deploy is rolling out when the versions differ, with a marker on the chip", async () => {
-    const view = online({ version: "0.7.0" });
-    expect(versionsDiffer(view, "0.7.1")).toBe(true);
-    expect(versionsDiffer(view, "0.7.0")).toBe(false);
-    expect(versionsDiffer(view, null)).toBe(false);
-    expect(versionsDiffer({ state: "offline" }, "0.7.1")).toBe(false);
-
-    inRouter(<EngineChip engine={view} pitwall="0.7.1" />);
-    const chip = screen.getByRole("button", { name: "Idle, a deploy is rolling out" });
-    expect(chip.querySelector("[data-slot=deploy-marker]")?.getAttribute("class")).toContain("bg-info");
+  it("shows both versions with no deploy warning when they differ (those-who-run/paddock#125 R7)", async () => {
+    inRouter(<EngineChip engine={online({ version: "0.1.14" })} pitwall="0.2.0" />);
+    const chip = screen.getByRole("button", { name: "Idle" });
+    expect(chip.querySelector("[data-slot=deploy-marker]")).toBeNull();
     await userEvent.click(chip);
-    expect((await screen.findByRole("dialog")).textContent).toContain(
-      "Engineer 0.7.0, pit wall 0.7.1: a deploy is rolling out",
-    );
+    const panel = await screen.findByRole("dialog");
+    expect(panel.textContent).toContain("Engineer0.1.14");
+    expect(panel.textContent).toContain("Pit wall 0.2.0 · Read-only");
+    expect(panel.textContent).not.toContain("deploy");
+  });
+
+  it("says the voice is unknown when radio says nothing of it (those-who-run/paddock#125 R6)", async () => {
+    inRouter(<EngineChip engine={online({ voice_connected: null })} pitwall={KIT_VERSION} />);
+    await userEvent.click(screen.getByRole("button", { name: "Idle" }));
+    expect((await screen.findByRole("dialog")).textContent).toContain("VoiceUnknown");
   });
 
   it("opens from the keyboard and closes on Escape", async () => {
@@ -168,19 +170,19 @@ describe("the popover (R2, R3, R9)", () => {
 /** The engineer answers each status call with the next of `answers`; the last repeats. */
 function engineer(answers: (() => Response)[]) {
   let n = 0;
-  return vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-    const path = new URL((input as Request).url).pathname;
+  return vi.spyOn(globalThis, "fetch").mockImplementation(v1Api(async (input) => {
+    const path = v1Url(input as Request).pathname;
     if (path === "/healthz") {
       return Response.json({ ok: true, version: KIT_VERSION, index: true, engineer: true });
     }
     const answer = answers[Math.min(n, answers.length - 1)]!;
     n += 1;
     return answer();
-  });
+  }));
 }
 
 const statusCalls = (fetch: ReturnType<typeof engineer>) =>
-  fetch.mock.calls.filter(([r]) => new URL((r as Request).url).pathname === "/api/engine/status").length;
+  fetch.mock.calls.filter(([r]) => v1Url(r as Request).pathname === "/api/engine/status").length;
 
 function renderLiveChip() {
   const client = new QueryClient();

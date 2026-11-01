@@ -24,6 +24,14 @@
         "those-who-run/contracts"
       ],
       "groupName": "contracts"
+    },
+    {
+      "description": "One Node for the web app: web/.node-version, which make web-check and CI use, and the image's web stage in the Dockerfile (those-who-run/paddock#131). One PR bumps both; tests/test_dockerfile.py fails while they differ.",
+      "matchPackageNames": [
+        "node",
+        "docker.io/library/node"
+      ],
+      "groupName": "node"
     }
   ]
 }

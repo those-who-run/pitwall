@@ -55,8 +55,7 @@ check: prereqs
 test: go-test test-repo
 
 # The repository's own checks apart from the Go tests: links, the guard copy, the
-# Go programs run by hand, and
-# the tests in tests/.
+# Go programs run by hand, and the tests in tests/.
 .PHONY: test-repo
 test-repo: links guard go-scripts
 	$(PY) -m unittest discover -s tests

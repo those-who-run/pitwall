@@ -17,6 +17,9 @@ on:
       - web/e2e/docs.screens.ts
       - web/e2e/global-setup.ts
       - web/e2e/pitwall.ts
+      - web/e2e/store.ts
+      - web/e2e/store/**
+      - Makefile
 
 # Nothing by default; the job asks for what it uses.
 permissions: {}

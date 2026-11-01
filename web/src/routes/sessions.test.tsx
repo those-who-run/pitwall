@@ -10,6 +10,13 @@ import { engine, liveSession, SESSIONS } from "@/kit/samples";
 import { routes } from "@/routes";
 import { v1Api, v1Url } from "@/api/testing";
 
+// The list's days are the viewer's calendar days, so the clock is set to the
+// afternoon of a fixed day, in the zone the tests run in: three sessions an hour
+// apart are all "Today" whenever the suite runs. With the real clock, a run in the
+// two hours after midnight put the older two on yesterday. Date alone is faked,
+// and it moves on with real time, so the polls and waits are unchanged.
+vi.useFakeTimers({ toFake: ["Date"], shouldAdvanceTime: true });
+vi.setSystemTime(new Date(2026, 9, 18, 14, 0));
 const NOW = Date.now() / 1000;
 const list = [
   { ...SESSIONS.live, started_at: NOW - 60, closed: false },

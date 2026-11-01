@@ -28,7 +28,7 @@ import type { Message, UnknownEnum } from "@bufbuild/protobuf";
  * Describes the file twr/pitwall/v1/pitwall.proto.
  */
 export const file_twr_pitwall_v1_pitwall: GenFile = /*@__PURE__*/
-  fileDesc("Chx0d3IvcGl0d2FsbC92MS9waXR3YWxsLnByb3RvEg50d3IucGl0d2FsbC52MSJrCgVUcmFjaxIVCgh0cmFja19pZBgBIAEoBUgAiAEBEgwKBG5hbWUYAiABKAkSDAoEc3VyZRgDIAEoCBIVCghldmlkZW5jZRgEIAEoCUgBiAEBQgsKCV90cmFja19pZEILCglfZXZpZGVuY2UiyQgKB1Nlc3Npb24SEgoKc2Vzc2lvbl9pZBgBIAEoCRINCgV0aXRsZRgCIAEoCRIOCgZyZXN1bHQYAyABKAkSLgoKc3RhcnRlZF9hdBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLAoIZW5kZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEg4KBmNsb3NlZBgGIAEoCBIMCgRraW5kGAcgASgJEhIKCmtpbmRfbGFiZWwYCCABKAkSJAoFdHJhY2sYCSABKAsyFS50d3IucGl0d2FsbC52MS5UcmFjaxIQCgNjYXIYCiABKAlIAIgBARIVCghjYXJfY29kZRgLIAEoBUgBiAEBEhAKCGZpbmlzaGVkGAwgASgIEhsKDmZpbmFsX3Bvc2l0aW9uGA0gASgFSAKIAQESFwoKdG90YWxfY2FycxgOIAEoBUgDiAEBEhYKDnBvc2l0aW9uX3Nob3duGA8gASgIEhoKDXRvdGFsX3RpbWVfbXMYECABKAVIBIgBARIYCgtiZXN0X2xhcF9tcxgRIAEoBUgFiAEBEhUKCGJlc3RfbGFwGBIgASgFSAaIAQESFgoObGFwc19jb21wbGV0ZWQYEyABKAUSFwoKdG90YWxfbGFwcxgUIAEoBUgHiAEBEhUKCGZ1ZWxfdXNlGBUgASgISAiIAQESGAoLZnVlbF9idXJuZWQYFiABKAFICYgBARIaCg1mdWVsX2NhcGFjaXR5GBcgASgBSAqIAQESFQoNZnVlbF9ieV9zdGludBgYIAMoARIRCglwaXRfc3RvcHMYGSABKAUSFwoKZHJpdmluZ19tcxgaIAEoBUgLiAEBEhYKCXBhdXNlZF9tcxgbIAEoBUgMiAEBEhoKDWpvaW5lZF9vbl9sYXAYHCABKAVIDYgBARIRCgljb250aW51ZWQYHSABKAgSFAoMcmVzdGFydF9sYXBzGB4gAygFEjIKDmNhcmRfcG9zdGVkX2F0GB8gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIZCgxmcm9tX3YxX3Jvd3MYICABKAhIDogBARIuCgpkZWxldGVkX2F0GCEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIGCgRfY2FyQgsKCV9jYXJfY29kZUIRCg9fZmluYWxfcG9zaXRpb25CDQoLX3RvdGFsX2NhcnNCEAoOX3RvdGFsX3RpbWVfbXNCDgoMX2Jlc3RfbGFwX21zQgsKCV9iZXN0X2xhcEINCgtfdG90YWxfbGFwc0ILCglfZnVlbF91c2VCDgoMX2Z1ZWxfYnVybmVkQhAKDl9mdWVsX2NhcGFjaXR5Qg0KC19kcml2aW5nX21zQgwKCl9wYXVzZWRfbXNCEAoOX2pvaW5lZF9vbl9sYXBCDwoNX2Zyb21fdjFfcm93cyKMAwoGTGFwUm93EgsKA2xhcBgBIAEoBRIUCgd0aW1lX21zGAIgASgFSACIAQESEAoIY29tcGxldGUYAyABKAgSFwoKZnVlbF9zdGFydBgEIAEoAUgBiAEBEhUKCGZ1ZWxfZW5kGAUgASgBSAKIAQESFgoJZnVlbF91c2VkGAYgASgBSAOIAQESFQoIcG9zaXRpb24YByABKAVIBIgBARIOCgZmcmFtZXMYCCABKAUSGgoNdG9wX3NwZWVkX2twaBgJIAEoAUgFiAEBEgsKA3BpdBgKIAEoCBIPCgdvdXRfbGFwGAsgASgIEg8KB2ludmFsaWQYDCABKAgSDAoEYmVzdBgNIAEoCBIQCghmdWVsX3VzZRgOIAEoCBIPCgdyZXN0YXJ0GA8gASgIEg0KBWNsZWFuGBAgASgIQgoKCF90aW1lX21zQg0KC19mdWVsX3N0YXJ0QgsKCV9mdWVsX2VuZEIMCgpfZnVlbF91c2VkQgsKCV9wb3NpdGlvbkIQCg5fdG9wX3NwZWVkX2twaCKgAQoFVHJhY2USEgoKc2Vzc2lvbl9pZBgBIAEoCRILCgNsYXAYAiABKAUSCQoBdBgDIAMoARIRCglzcGVlZF9rcGgYBCADKAESFAoMdGhyb3R0bGVfcGN0GAUgAygBEhEKCWJyYWtlX3BjdBgGIAMoARIMCgRnZWFyGAcgAygFEgsKA3JwbRgIIAMoARIJCgF4GAkgAygBEgkKAXoYCiADKAEiLAoMRmlsdGVyT3B0aW9uEg0KBXZhbHVlGAEgASgJEg0KBWNvdW50GAIgASgFIjkKCktpbmRPcHRpb24SDQoFdmFsdWUYASABKAkSDQoFbGFiZWwYAiABKAkSDQoFY291bnQYAyABKAUikQEKDUZpbHRlck9wdGlvbnMSKwoFdHJhY2sYASADKAsyHC50d3IucGl0d2FsbC52MS5GaWx0ZXJPcHRpb24SKQoDY2FyGAIgAygLMhwudHdyLnBpdHdhbGwudjEuRmlsdGVyT3B0aW9uEigKBGtpbmQYAyADKAsyGi50d3IucGl0d2FsbC52MS5LaW5kT3B0aW9uInQKE0xpc3RTZXNzaW9uc1JlcXVlc3QSDQoFdHJhY2sYASABKAkSCwoDY2FyGAIgASgJEgwKBGtpbmQYAyABKAkSEAoIZnJvbV9kYXkYBCABKAkSDgoGdG9fZGF5GAUgASgJEhEKCXRpbWVfem9uZRgGIAEoCSKRAQoUTGlzdFNlc3Npb25zUmVzcG9uc2USKQoIc2Vzc2lvbnMYASADKAsyFy50d3IucGl0d2FsbC52MS5TZXNzaW9uEi4KB29wdGlvbnMYAiABKAsyHS50d3IucGl0d2FsbC52MS5GaWx0ZXJPcHRpb25zEg0KBXRvdGFsGAMgASgFEg8KB21hdGNoZWQYBCABKAUiJwoRR2V0U2Vzc2lvblJlcXVlc3QSEgoKc2Vzc2lvbl9pZBgBIAEoCSI+ChJHZXRTZXNzaW9uUmVzcG9uc2USKAoHc2Vzc2lvbhgBIAEoCzIXLnR3ci5waXR3YWxsLnYxLlNlc3Npb24iJQoPTGlzdExhcHNSZXF1ZXN0EhIKCnNlc3Npb25faWQYASABKAkiTAoQTGlzdExhcHNSZXNwb25zZRISCgpzZXNzaW9uX2lkGAEgASgJEiQKBGxhcHMYAiADKAsyFi50d3IucGl0d2FsbC52MS5MYXBSb3ciQgoPR2V0VHJhY2VSZXF1ZXN0EhIKCnNlc3Npb25faWQYASABKAkSCwoDbGFwGAIgASgFEg4KBnBvaW50cxgDIAEoBSI4ChBHZXRUcmFjZVJlc3BvbnNlEiQKBXRyYWNlGAEgASgLMhUudHdyLnBpdHdhbGwudjEuVHJhY2UiKgoUTGlzdFNhbWVUcmFja1JlcXVlc3QSEgoKc2Vzc2lvbl9pZBgBIAEoCSJCChVMaXN0U2FtZVRyYWNrUmVzcG9uc2USKQoIc2Vzc2lvbnMYASADKAsyFy50d3IucGl0d2FsbC52MS5TZXNzaW9uIl4KDVRlbGVtZXRyeUxpbmsSEQoJY29ubmVjdGVkGAEgASgIEiEKFGxhc3RfcGFja2V0X2FnZV9zZWNzGAIgASgBSACIAQFCFwoVX2xhc3RfcGFja2V0X2FnZV9zZWNzIlkKCUxpdmVUcmFjaxIVCgh0cmFja19pZBgBIAEoBUgAiAEBEhEKBG5hbWUYAiABKAlIAYgBARIMCgRzdXJlGAMgASgIQgsKCV90cmFja19pZEIHCgVfbmFtZSKBAgoLTGl2ZVNlc3Npb24SEgoKc2Vzc2lvbl9pZBgBIAEoCRIMCgRraW5kGAIgASgJEigKBXRyYWNrGAMgASgLMhkudHdyLnBpdHdhbGwudjEuTGl2ZVRyYWNrEhAKA2NhchgEIAEoCUgAiAEBEhAKA2xhcBgFIAEoBUgBiAEBEhcKCnRvdGFsX2xhcHMYBiABKAVIAogBARIVCghwb3NpdGlvbhgHIAEoBUgDiAEBEhcKCnRvdGFsX2NhcnMYCCABKAVIBIgBAUIGCgRfY2FyQgYKBF9sYXBCDQoLX3RvdGFsX2xhcHNCCwoJX3Bvc2l0aW9uQg0KC190b3RhbF9jYXJzIqACCgxFbmdpbmVTdGF0dXMSDwoHdmVyc2lvbhgBIAEoCRIuCgpzdGFydGVkX2F0GAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIqCghhY3Rpdml0eRgDIAEoDjIYLnR3ci5waXR3YWxsLnYxLkFjdGl2aXR5EhEKCWlkbGVfc2VjcxgEIAEoARIwCgl0ZWxlbWV0cnkYBSABKAsyHS50d3IucGl0d2FsbC52MS5UZWxlbWV0cnlMaW5rEhwKD3ZvaWNlX2Nvbm5lY3RlZBgGIAEoCEgAiAEBEiwKB3Nlc3Npb24YByABKAsyGy50d3IucGl0d2FsbC52MS5MaXZlU2Vzc2lvbkISChBfdm9pY2VfY29ubmVjdGVkIhgKFkdldEVuZ2luZVN0YXR1c1JlcXVlc3QiKgoURGVsZXRlU2Vzc2lvblJlcXVlc3QSEgoKc2Vzc2lvbl9pZBgBIAEoCSJBChVEZWxldGVTZXNzaW9uUmVzcG9uc2USKAoHc2Vzc2lvbhgBIAEoCzIXLnR3ci5waXR3YWxsLnYxLlNlc3Npb24iKwoVUmVzdG9yZVNlc3Npb25SZXF1ZXN0EhIKCnNlc3Npb25faWQYASABKAkiQgoWUmVzdG9yZVNlc3Npb25SZXNwb25zZRIoCgdzZXNzaW9uGAEgASgLMhcudHdyLnBpdHdhbGwudjEuU2Vzc2lvbiJHChdHZXRFbmdpbmVTdGF0dXNSZXNwb25zZRIsCgZzdGF0dXMYASABKAsyHC50d3IucGl0d2FsbC52MS5FbmdpbmVTdGF0dXMqoAEKCEFjdGl2aXR5EhgKFEFDVElWSVRZX1VOU1BFQ0lGSUVEEAASEQoNQUNUSVZJVFlfSURMRRABEhQKEEFDVElWSVRZX0RSSVZJTkcQAhITCg9BQ1RJVklUWV9QQVVTRUQQAxITCg9BQ1RJVklUWV9SRVBMQVkQBBIRCg1BQ1RJVklUWV9ERU1PEAUSFAoQQUNUSVZJVFlfT0ZGTElORRAGMv0FCg5QaXR3YWxsU2VydmljZRJeCgxMaXN0U2Vzc2lvbnMSIy50d3IucGl0d2FsbC52MS5MaXN0U2Vzc2lvbnNSZXF1ZXN0GiQudHdyLnBpdHdhbGwudjEuTGlzdFNlc3Npb25zUmVzcG9uc2UiA5ACARJYCgpHZXRTZXNzaW9uEiEudHdyLnBpdHdhbGwudjEuR2V0U2Vzc2lvblJlcXVlc3QaIi50d3IucGl0d2FsbC52MS5HZXRTZXNzaW9uUmVzcG9uc2UiA5ACARJSCghMaXN0TGFwcxIfLnR3ci5waXR3YWxsLnYxLkxpc3RMYXBzUmVxdWVzdBogLnR3ci5waXR3YWxsLnYxLkxpc3RMYXBzUmVzcG9uc2UiA5ACARJSCghHZXRUcmFjZRIfLnR3ci5waXR3YWxsLnYxLkdldFRyYWNlUmVxdWVzdBogLnR3ci5waXR3YWxsLnYxLkdldFRyYWNlUmVzcG9uc2UiA5ACARJhCg1MaXN0U2FtZVRyYWNrEiQudHdyLnBpdHdhbGwudjEuTGlzdFNhbWVUcmFja1JlcXVlc3QaJS50d3IucGl0d2FsbC52MS5MaXN0U2FtZVRyYWNrUmVzcG9uc2UiA5ACARJnCg9HZXRFbmdpbmVTdGF0dXMSJi50d3IucGl0d2FsbC52MS5HZXRFbmdpbmVTdGF0dXNSZXF1ZXN0GicudHdyLnBpdHdhbGwudjEuR2V0RW5naW5lU3RhdHVzUmVzcG9uc2UiA5ACARJcCg1EZWxldGVTZXNzaW9uEiQudHdyLnBpdHdhbGwudjEuRGVsZXRlU2Vzc2lvblJlcXVlc3QaJS50d3IucGl0d2FsbC52MS5EZWxldGVTZXNzaW9uUmVzcG9uc2USXwoOUmVzdG9yZVNlc3Npb24SJS50d3IucGl0d2FsbC52MS5SZXN0b3JlU2Vzc2lvblJlcXVlc3QaJi50d3IucGl0d2FsbC52MS5SZXN0b3JlU2Vzc2lvblJlc3BvbnNlYgZwcm90bzM", [file_google_protobuf_timestamp]);
+  fileDesc("Chx0d3IvcGl0d2FsbC92MS9waXR3YWxsLnByb3RvEg50d3IucGl0d2FsbC52MSJrCgVUcmFjaxIVCgh0cmFja19pZBgBIAEoBUgAiAEBEgwKBG5hbWUYAiABKAkSDAoEc3VyZRgDIAEoCBIVCghldmlkZW5jZRgEIAEoCUgBiAEBQgsKCV90cmFja19pZEILCglfZXZpZGVuY2UiyQgKB1Nlc3Npb24SEgoKc2Vzc2lvbl9pZBgBIAEoCRINCgV0aXRsZRgCIAEoCRIOCgZyZXN1bHQYAyABKAkSLgoKc3RhcnRlZF9hdBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLAoIZW5kZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEg4KBmNsb3NlZBgGIAEoCBIMCgRraW5kGAcgASgJEhIKCmtpbmRfbGFiZWwYCCABKAkSJAoFdHJhY2sYCSABKAsyFS50d3IucGl0d2FsbC52MS5UcmFjaxIQCgNjYXIYCiABKAlIAIgBARIVCghjYXJfY29kZRgLIAEoBUgBiAEBEhAKCGZpbmlzaGVkGAwgASgIEhsKDmZpbmFsX3Bvc2l0aW9uGA0gASgFSAKIAQESFwoKdG90YWxfY2FycxgOIAEoBUgDiAEBEhYKDnBvc2l0aW9uX3Nob3duGA8gASgIEhoKDXRvdGFsX3RpbWVfbXMYECABKAVIBIgBARIYCgtiZXN0X2xhcF9tcxgRIAEoBUgFiAEBEhUKCGJlc3RfbGFwGBIgASgFSAaIAQESFgoObGFwc19jb21wbGV0ZWQYEyABKAUSFwoKdG90YWxfbGFwcxgUIAEoBUgHiAEBEhUKCGZ1ZWxfdXNlGBUgASgISAiIAQESGAoLZnVlbF9idXJuZWQYFiABKAFICYgBARIaCg1mdWVsX2NhcGFjaXR5GBcgASgBSAqIAQESFQoNZnVlbF9ieV9zdGludBgYIAMoARIRCglwaXRfc3RvcHMYGSABKAUSFwoKZHJpdmluZ19tcxgaIAEoBUgLiAEBEhYKCXBhdXNlZF9tcxgbIAEoBUgMiAEBEhoKDWpvaW5lZF9vbl9sYXAYHCABKAVIDYgBARIRCgljb250aW51ZWQYHSABKAgSFAoMcmVzdGFydF9sYXBzGB4gAygFEjIKDmNhcmRfcG9zdGVkX2F0GB8gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIZCgxmcm9tX3YxX3Jvd3MYICABKAhIDogBARIuCgpkZWxldGVkX2F0GCEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIGCgRfY2FyQgsKCV9jYXJfY29kZUIRCg9fZmluYWxfcG9zaXRpb25CDQoLX3RvdGFsX2NhcnNCEAoOX3RvdGFsX3RpbWVfbXNCDgoMX2Jlc3RfbGFwX21zQgsKCV9iZXN0X2xhcEINCgtfdG90YWxfbGFwc0ILCglfZnVlbF91c2VCDgoMX2Z1ZWxfYnVybmVkQhAKDl9mdWVsX2NhcGFjaXR5Qg0KC19kcml2aW5nX21zQgwKCl9wYXVzZWRfbXNCEAoOX2pvaW5lZF9vbl9sYXBCDwoNX2Zyb21fdjFfcm93cyKMAwoGTGFwUm93EgsKA2xhcBgBIAEoBRIUCgd0aW1lX21zGAIgASgFSACIAQESEAoIY29tcGxldGUYAyABKAgSFwoKZnVlbF9zdGFydBgEIAEoAUgBiAEBEhUKCGZ1ZWxfZW5kGAUgASgBSAKIAQESFgoJZnVlbF91c2VkGAYgASgBSAOIAQESFQoIcG9zaXRpb24YByABKAVIBIgBARIOCgZmcmFtZXMYCCABKAUSGgoNdG9wX3NwZWVkX2twaBgJIAEoAUgFiAEBEgsKA3BpdBgKIAEoCBIPCgdvdXRfbGFwGAsgASgIEg8KB2ludmFsaWQYDCABKAgSDAoEYmVzdBgNIAEoCBIQCghmdWVsX3VzZRgOIAEoCBIPCgdyZXN0YXJ0GA8gASgIEg0KBWNsZWFuGBAgASgIQgoKCF90aW1lX21zQg0KC19mdWVsX3N0YXJ0QgsKCV9mdWVsX2VuZEIMCgpfZnVlbF91c2VkQgsKCV9wb3NpdGlvbkIQCg5fdG9wX3NwZWVkX2twaCKgAQoFVHJhY2USEgoKc2Vzc2lvbl9pZBgBIAEoCRILCgNsYXAYAiABKAUSCQoBdBgDIAMoARIRCglzcGVlZF9rcGgYBCADKAESFAoMdGhyb3R0bGVfcGN0GAUgAygBEhEKCWJyYWtlX3BjdBgGIAMoARIMCgRnZWFyGAcgAygFEgsKA3JwbRgIIAMoARIJCgF4GAkgAygBEgkKAXoYCiADKAEiLAoMRmlsdGVyT3B0aW9uEg0KBXZhbHVlGAEgASgJEg0KBWNvdW50GAIgASgFIjkKCktpbmRPcHRpb24SDQoFdmFsdWUYASABKAkSDQoFbGFiZWwYAiABKAkSDQoFY291bnQYAyABKAUikQEKDUZpbHRlck9wdGlvbnMSKwoFdHJhY2sYASADKAsyHC50d3IucGl0d2FsbC52MS5GaWx0ZXJPcHRpb24SKQoDY2FyGAIgAygLMhwudHdyLnBpdHdhbGwudjEuRmlsdGVyT3B0aW9uEigKBGtpbmQYAyADKAsyGi50d3IucGl0d2FsbC52MS5LaW5kT3B0aW9uInQKE0xpc3RTZXNzaW9uc1JlcXVlc3QSDQoFdHJhY2sYASABKAkSCwoDY2FyGAIgASgJEgwKBGtpbmQYAyABKAkSEAoIZnJvbV9kYXkYBCABKAkSDgoGdG9fZGF5GAUgASgJEhEKCXRpbWVfem9uZRgGIAEoCSKRAQoUTGlzdFNlc3Npb25zUmVzcG9uc2USKQoIc2Vzc2lvbnMYASADKAsyFy50d3IucGl0d2FsbC52MS5TZXNzaW9uEi4KB29wdGlvbnMYAiABKAsyHS50d3IucGl0d2FsbC52MS5GaWx0ZXJPcHRpb25zEg0KBXRvdGFsGAMgASgFEg8KB21hdGNoZWQYBCABKAUiJwoRR2V0U2Vzc2lvblJlcXVlc3QSEgoKc2Vzc2lvbl9pZBgBIAEoCSI+ChJHZXRTZXNzaW9uUmVzcG9uc2USKAoHc2Vzc2lvbhgBIAEoCzIXLnR3ci5waXR3YWxsLnYxLlNlc3Npb24iJQoPTGlzdExhcHNSZXF1ZXN0EhIKCnNlc3Npb25faWQYASABKAkiTAoQTGlzdExhcHNSZXNwb25zZRISCgpzZXNzaW9uX2lkGAEgASgJEiQKBGxhcHMYAiADKAsyFi50d3IucGl0d2FsbC52MS5MYXBSb3ciQgoPR2V0VHJhY2VSZXF1ZXN0EhIKCnNlc3Npb25faWQYASABKAkSCwoDbGFwGAIgASgFEg4KBnBvaW50cxgDIAEoBSI4ChBHZXRUcmFjZVJlc3BvbnNlEiQKBXRyYWNlGAEgASgLMhUudHdyLnBpdHdhbGwudjEuVHJhY2UiKgoUTGlzdFNhbWVUcmFja1JlcXVlc3QSEgoKc2Vzc2lvbl9pZBgBIAEoCSJCChVMaXN0U2FtZVRyYWNrUmVzcG9uc2USKQoIc2Vzc2lvbnMYASADKAsyFy50d3IucGl0d2FsbC52MS5TZXNzaW9uIl4KDVRlbGVtZXRyeUxpbmsSEQoJY29ubmVjdGVkGAEgASgIEiEKFGxhc3RfcGFja2V0X2FnZV9zZWNzGAIgASgBSACIAQFCFwoVX2xhc3RfcGFja2V0X2FnZV9zZWNzIlkKCUxpdmVUcmFjaxIVCgh0cmFja19pZBgBIAEoBUgAiAEBEhEKBG5hbWUYAiABKAlIAYgBARIMCgRzdXJlGAMgASgIQgsKCV90cmFja19pZEIHCgVfbmFtZSKBAgoLTGl2ZVNlc3Npb24SEgoKc2Vzc2lvbl9pZBgBIAEoCRIMCgRraW5kGAIgASgJEigKBXRyYWNrGAMgASgLMhkudHdyLnBpdHdhbGwudjEuTGl2ZVRyYWNrEhAKA2NhchgEIAEoCUgAiAEBEhAKA2xhcBgFIAEoBUgBiAEBEhcKCnRvdGFsX2xhcHMYBiABKAVIAogBARIVCghwb3NpdGlvbhgHIAEoBUgDiAEBEhcKCnRvdGFsX2NhcnMYCCABKAVIBIgBAUIGCgRfY2FyQgYKBF9sYXBCDQoLX3RvdGFsX2xhcHNCCwoJX3Bvc2l0aW9uQg0KC190b3RhbF9jYXJzIqACCgxFbmdpbmVTdGF0dXMSDwoHdmVyc2lvbhgBIAEoCRIuCgpzdGFydGVkX2F0GAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIqCghhY3Rpdml0eRgDIAEoDjIYLnR3ci5waXR3YWxsLnYxLkFjdGl2aXR5EhEKCWlkbGVfc2VjcxgEIAEoARIwCgl0ZWxlbWV0cnkYBSABKAsyHS50d3IucGl0d2FsbC52MS5UZWxlbWV0cnlMaW5rEhwKD3ZvaWNlX2Nvbm5lY3RlZBgGIAEoCEgAiAEBEiwKB3Nlc3Npb24YByABKAsyGy50d3IucGl0d2FsbC52MS5MaXZlU2Vzc2lvbkISChBfdm9pY2VfY29ubmVjdGVkIhgKFkdldEVuZ2luZVN0YXR1c1JlcXVlc3QiRwoXR2V0RW5naW5lU3RhdHVzUmVzcG9uc2USLAoGc3RhdHVzGAEgASgLMhwudHdyLnBpdHdhbGwudjEuRW5naW5lU3RhdHVzIioKFERlbGV0ZVNlc3Npb25SZXF1ZXN0EhIKCnNlc3Npb25faWQYASABKAkiQQoVRGVsZXRlU2Vzc2lvblJlc3BvbnNlEigKB3Nlc3Npb24YASABKAsyFy50d3IucGl0d2FsbC52MS5TZXNzaW9uIisKFVJlc3RvcmVTZXNzaW9uUmVxdWVzdBISCgpzZXNzaW9uX2lkGAEgASgJIkIKFlJlc3RvcmVTZXNzaW9uUmVzcG9uc2USKAoHc2Vzc2lvbhgBIAEoCzIXLnR3ci5waXR3YWxsLnYxLlNlc3Npb24qoAEKCEFjdGl2aXR5EhgKFEFDVElWSVRZX1VOU1BFQ0lGSUVEEAASEQoNQUNUSVZJVFlfSURMRRABEhQKEEFDVElWSVRZX0RSSVZJTkcQAhITCg9BQ1RJVklUWV9QQVVTRUQQAxITCg9BQ1RJVklUWV9SRVBMQVkQBBIRCg1BQ1RJVklUWV9ERU1PEAUSFAoQQUNUSVZJVFlfT0ZGTElORRAGMv0FCg5QaXR3YWxsU2VydmljZRJeCgxMaXN0U2Vzc2lvbnMSIy50d3IucGl0d2FsbC52MS5MaXN0U2Vzc2lvbnNSZXF1ZXN0GiQudHdyLnBpdHdhbGwudjEuTGlzdFNlc3Npb25zUmVzcG9uc2UiA5ACARJYCgpHZXRTZXNzaW9uEiEudHdyLnBpdHdhbGwudjEuR2V0U2Vzc2lvblJlcXVlc3QaIi50d3IucGl0d2FsbC52MS5HZXRTZXNzaW9uUmVzcG9uc2UiA5ACARJSCghMaXN0TGFwcxIfLnR3ci5waXR3YWxsLnYxLkxpc3RMYXBzUmVxdWVzdBogLnR3ci5waXR3YWxsLnYxLkxpc3RMYXBzUmVzcG9uc2UiA5ACARJSCghHZXRUcmFjZRIfLnR3ci5waXR3YWxsLnYxLkdldFRyYWNlUmVxdWVzdBogLnR3ci5waXR3YWxsLnYxLkdldFRyYWNlUmVzcG9uc2UiA5ACARJhCg1MaXN0U2FtZVRyYWNrEiQudHdyLnBpdHdhbGwudjEuTGlzdFNhbWVUcmFja1JlcXVlc3QaJS50d3IucGl0d2FsbC52MS5MaXN0U2FtZVRyYWNrUmVzcG9uc2UiA5ACARJnCg9HZXRFbmdpbmVTdGF0dXMSJi50d3IucGl0d2FsbC52MS5HZXRFbmdpbmVTdGF0dXNSZXF1ZXN0GicudHdyLnBpdHdhbGwudjEuR2V0RW5naW5lU3RhdHVzUmVzcG9uc2UiA5ACARJcCg1EZWxldGVTZXNzaW9uEiQudHdyLnBpdHdhbGwudjEuRGVsZXRlU2Vzc2lvblJlcXVlc3QaJS50d3IucGl0d2FsbC52MS5EZWxldGVTZXNzaW9uUmVzcG9uc2USXwoOUmVzdG9yZVNlc3Npb24SJS50d3IucGl0d2FsbC52MS5SZXN0b3JlU2Vzc2lvblJlcXVlc3QaJi50d3IucGl0d2FsbC52MS5SZXN0b3JlU2Vzc2lvblJlc3BvbnNlYgZwcm90bzM", [file_google_protobuf_timestamp]);
 
 /**
  * Track is the track as the detector placed it (v1's `Track`).
@@ -1221,8 +1221,8 @@ export const KindOptionSchema: GenMessage<KindOption, {jsonType: KindOptionJson}
   messageDesc(file_twr_pitwall_v1_pitwall, 5);
 
 /**
- * FilterOptions is the values each filter can take, from every session, each
- * with a count (v1's `FilterOptions`).
+ * FilterOptions is the values each filter can take, from every session not
+ * deleted, each with a count (v1's `FilterOptions`).
  *
  * @generated from message twr.pitwall.v1.FilterOptions
  */
@@ -1250,8 +1250,8 @@ export type FilterOptions = Message<"twr.pitwall.v1.FilterOptions"> & {
 };
 
 /**
- * FilterOptions is the values each filter can take, from every session, each
- * with a count (v1's `FilterOptions`).
+ * FilterOptions is the values each filter can take, from every session not
+ * deleted, each with a count (v1's `FilterOptions`).
  *
  * @generated from message twr.pitwall.v1.FilterOptions
  */
@@ -1420,14 +1420,15 @@ export type ListSessionsResponse = Message<"twr.pitwall.v1.ListSessionsResponse"
   sessions: Session[];
 
   /**
-   * The filter values from every session, not just these (v1's `options`).
+   * The filter values from every session not deleted, not just these (v1's
+   * `options`).
    *
    * @generated from field: twr.pitwall.v1.FilterOptions options = 2;
    */
   options?: FilterOptions | undefined;
 
   /**
-   * The sessions in the store (v1's `total`).
+   * The sessions in the store not deleted (v1's `total`).
    *
    * @generated from field: int32 total = 3;
    */
@@ -1458,14 +1459,15 @@ export type ListSessionsResponseJson = {
   sessions?: SessionJson[];
 
   /**
-   * The filter values from every session, not just these (v1's `options`).
+   * The filter values from every session not deleted, not just these (v1's
+   * `options`).
    *
    * @generated from field: twr.pitwall.v1.FilterOptions options = 2;
    */
   options?: FilterOptionsJson;
 
   /**
-   * The sessions in the store (v1's `total`).
+   * The sessions in the store not deleted (v1's `total`).
    *
    * @generated from field: int32 total = 3;
    */
@@ -1781,13 +1783,16 @@ export const ListSameTrackRequestSchema: GenMessage<ListSameTrackRequest, {jsonT
 /**
  * ListSameTrackResponse is the other sessions at the same track (v1's
  * `SameTrack`). Two sessions are at the same track only when the detector
- * was sure of both.
+ * was sure of both. Deleted sessions are left out; a session asked for that
+ * is itself deleted is answered as usual, its other sessions without the
+ * deleted ones.
  *
  * @generated from message twr.pitwall.v1.ListSameTrackResponse
  */
 export type ListSameTrackResponse = Message<"twr.pitwall.v1.ListSameTrackResponse"> & {
   /**
-   * The other sessions at the same track, newest first (v1's `sessions`).
+   * The other sessions at the same track not deleted, newest first (v1's
+   * `sessions`).
    *
    * @generated from field: repeated twr.pitwall.v1.Session sessions = 1;
    */
@@ -1797,13 +1802,16 @@ export type ListSameTrackResponse = Message<"twr.pitwall.v1.ListSameTrackRespons
 /**
  * ListSameTrackResponse is the other sessions at the same track (v1's
  * `SameTrack`). Two sessions are at the same track only when the detector
- * was sure of both.
+ * was sure of both. Deleted sessions are left out; a session asked for that
+ * is itself deleted is answered as usual, its other sessions without the
+ * deleted ones.
  *
  * @generated from message twr.pitwall.v1.ListSameTrackResponse
  */
 export type ListSameTrackResponseJson = {
   /**
-   * The other sessions at the same track, newest first (v1's `sessions`).
+   * The other sessions at the same track not deleted, newest first (v1's
+   * `sessions`).
    *
    * @generated from field: repeated twr.pitwall.v1.Session sessions = 1;
    */
@@ -2237,6 +2245,41 @@ export const GetEngineStatusRequestSchema: GenMessage<GetEngineStatusRequest, {j
   messageDesc(file_twr_pitwall_v1_pitwall, 21);
 
 /**
+ * GetEngineStatusResponse is the engineer's status.
+ *
+ * @generated from message twr.pitwall.v1.GetEngineStatusResponse
+ */
+export type GetEngineStatusResponse = Message<"twr.pitwall.v1.GetEngineStatusResponse"> & {
+  /**
+   * The status (v1's body was the EngineStatus itself).
+   *
+   * @generated from field: twr.pitwall.v1.EngineStatus status = 1;
+   */
+  status?: EngineStatus | undefined;
+};
+
+/**
+ * GetEngineStatusResponse is the engineer's status.
+ *
+ * @generated from message twr.pitwall.v1.GetEngineStatusResponse
+ */
+export type GetEngineStatusResponseJson = {
+  /**
+   * The status (v1's body was the EngineStatus itself).
+   *
+   * @generated from field: twr.pitwall.v1.EngineStatus status = 1;
+   */
+  status?: EngineStatusJson;
+};
+
+/**
+ * Describes the message twr.pitwall.v1.GetEngineStatusResponse.
+ * Use `create(GetEngineStatusResponseSchema)` to create a new message.
+ */
+export const GetEngineStatusResponseSchema: GenMessage<GetEngineStatusResponse, {jsonType: GetEngineStatusResponseJson}> = /*@__PURE__*/
+  messageDesc(file_twr_pitwall_v1_pitwall, 22);
+
+/**
  * DeleteSessionRequest names the session to delete.
  *
  * @generated from message twr.pitwall.v1.DeleteSessionRequest
@@ -2269,7 +2312,7 @@ export type DeleteSessionRequestJson = {
  * Use `create(DeleteSessionRequestSchema)` to create a new message.
  */
 export const DeleteSessionRequestSchema: GenMessage<DeleteSessionRequest, {jsonType: DeleteSessionRequestJson}> = /*@__PURE__*/
-  messageDesc(file_twr_pitwall_v1_pitwall, 22);
+  messageDesc(file_twr_pitwall_v1_pitwall, 23);
 
 /**
  * DeleteSessionResponse is the session, deleted.
@@ -2304,7 +2347,7 @@ export type DeleteSessionResponseJson = {
  * Use `create(DeleteSessionResponseSchema)` to create a new message.
  */
 export const DeleteSessionResponseSchema: GenMessage<DeleteSessionResponse, {jsonType: DeleteSessionResponseJson}> = /*@__PURE__*/
-  messageDesc(file_twr_pitwall_v1_pitwall, 23);
+  messageDesc(file_twr_pitwall_v1_pitwall, 24);
 
 /**
  * RestoreSessionRequest names the deleted session to restore.
@@ -2339,7 +2382,7 @@ export type RestoreSessionRequestJson = {
  * Use `create(RestoreSessionRequestSchema)` to create a new message.
  */
 export const RestoreSessionRequestSchema: GenMessage<RestoreSessionRequest, {jsonType: RestoreSessionRequestJson}> = /*@__PURE__*/
-  messageDesc(file_twr_pitwall_v1_pitwall, 24);
+  messageDesc(file_twr_pitwall_v1_pitwall, 25);
 
 /**
  * RestoreSessionResponse is the session, restored.
@@ -2374,41 +2417,6 @@ export type RestoreSessionResponseJson = {
  * Use `create(RestoreSessionResponseSchema)` to create a new message.
  */
 export const RestoreSessionResponseSchema: GenMessage<RestoreSessionResponse, {jsonType: RestoreSessionResponseJson}> = /*@__PURE__*/
-  messageDesc(file_twr_pitwall_v1_pitwall, 25);
-
-/**
- * GetEngineStatusResponse is the engineer's status.
- *
- * @generated from message twr.pitwall.v1.GetEngineStatusResponse
- */
-export type GetEngineStatusResponse = Message<"twr.pitwall.v1.GetEngineStatusResponse"> & {
-  /**
-   * The status (v1's body was the EngineStatus itself).
-   *
-   * @generated from field: twr.pitwall.v1.EngineStatus status = 1;
-   */
-  status?: EngineStatus | undefined;
-};
-
-/**
- * GetEngineStatusResponse is the engineer's status.
- *
- * @generated from message twr.pitwall.v1.GetEngineStatusResponse
- */
-export type GetEngineStatusResponseJson = {
-  /**
-   * The status (v1's body was the EngineStatus itself).
-   *
-   * @generated from field: twr.pitwall.v1.EngineStatus status = 1;
-   */
-  status?: EngineStatusJson;
-};
-
-/**
- * Describes the message twr.pitwall.v1.GetEngineStatusResponse.
- * Use `create(GetEngineStatusResponseSchema)` to create a new message.
- */
-export const GetEngineStatusResponseSchema: GenMessage<GetEngineStatusResponse, {jsonType: GetEngineStatusResponseJson}> = /*@__PURE__*/
   messageDesc(file_twr_pitwall_v1_pitwall, 26);
 
 /**
@@ -2499,8 +2507,11 @@ export const ActivitySchema: GenEnum<Activity, ActivityJson> = /*@__PURE__*/
  * pit wall answers an ETag and a 304 as v1 did (every read but
  * GetEngineStatus, which is never cached). Its two writes, DeleteSession and
  * RestoreSession (ADR 0014 in paddock), have side effects, so Connect serves
- * them as POST, and they are never cached; a write that changes a session
- * changes every read's ETag, the session list's among them. A session or lap
+ * them as POST, and they are never cached. A write that changes a session
+ * changes the ETags of ListSessions, GetSession, ListLaps and ListSameTrack,
+ * which follow the store-wide stamp, so the session list's and the session
+ * page's ETags change; GetTrace's, which follows only the lap's frames, does
+ * not. A session or lap
  * that does not exist answers Connect's not_found, a bad argument
  * invalid_argument, deleting an open session failed_precondition, and logbook
  * not answering unavailable.
@@ -2509,7 +2520,8 @@ export const ActivitySchema: GenEnum<Activity, ActivityJson> = /*@__PURE__*/
  */
 export const PitwallService: GenService<{
   /**
-   * ListSessions is the session list: every session, newest first, filtered,
+   * ListSessions is the session list: every session not deleted, newest
+   * first, filtered,
    * with the values each filter can take and their counts (v1's
    * `GET /api/v1/sessions`).
    *
@@ -2582,8 +2594,10 @@ export const PitwallService: GenService<{
    * DeleteSession deletes a closed session, softly (logbook's
    * svc.logbook.sessions.delete): it keeps everything, so RestoreSession
    * brings it back. A deleted session is left out of ListSessions, its
-   * filter values and counts, and ListSameTrack; GetSession, ListLaps and
-   * GetTrace still answer for it, with deleted_at set. Deleting a deleted
+   * filter values and counts, and ListSameTrack; GetSession still answers for
+   * it with deleted_at set, and ListLaps and GetTrace still answer for it. A
+   * later write of the session (a redelivered event, a rerun of the v1
+   * import) keeps deleted_at; only RestoreSession clears it. Deleting a deleted
    * session succeeds and changes nothing. An open session answers
    * failed_precondition, and one that does not exist not_found. v1 had no
    * such route.

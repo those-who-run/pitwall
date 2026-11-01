@@ -10,6 +10,7 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { stripVTControlCharacters } from "node:util";
 
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -19,6 +20,13 @@ const CASES = join(WEB, "src", "api", "gen", "format-cases.json");
 const tmp = mkdtempSync(join(tmpdir(), "format-cases-"));
 
 afterAll(() => rmSync(tmp, { recursive: true, force: true }));
+
+/** The environment without FORCE_COLOR, which would win over NO_COLOR. */
+function plain(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const rest = { ...env };
+  delete rest.FORCE_COLOR;
+  return rest;
+}
 
 /** format.test.ts run over `cases`, in a Vitest of its own: its exit code and output. */
 function formatTestOver(name: string, cases: string): { status: number | null; output: string } {
@@ -33,9 +41,10 @@ function formatTestOver(name: string, cases: string): { status: number | null; o
       "scripts/format-cases.vitest.config.ts",
       "src/lib/format.test.ts",
     ],
-    { cwd: WEB, env: { ...process.env, FORMAT_CASES: path, CI: "1" }, encoding: "utf8", timeout: 120_000 },
+    { cwd: WEB, env: { ...plain(process.env), FORMAT_CASES: path, NO_COLOR: "1" }, encoding: "utf8", timeout: 120_000 },
   );
-  return { status: run.status, output: `${run.stdout}${run.stderr}` };
+  // Without colours (CI sets FORCE_COLOR), and any escape left taken out.
+  return { status: run.status, output: stripVTControlCharacters(`${run.stdout}${run.stderr}`) };
 }
 
 describe("a case changed in contracts (#128 AC3)", () => {

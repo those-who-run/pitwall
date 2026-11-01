@@ -3,8 +3,8 @@
 // page, lap compare and /_kit, at the phone and desktop sizes, into
 // docs/assets/screens/<viewport>/<page>.png.
 //
-// The same pictures every run: the store is dated from a fixed time (the config's
-// E2E_REPLAY_CLOCK), the browser's clock is fixed after the newest session, the
+// The same pictures every run: the store's sessions are dated (./store/make.go),
+// the browser's clock is fixed after the newest session (./pitwall.ts's NOW), the
 // time zone and locale are set, motion is reduced, the fonts have loaded, the
 // engineer is in one scenario ("idle"), and no session is open (the docs config's
 // E2E_NO_LIVE_SESSION), so no card says "Running" under an "Idle" chip. Each shot
@@ -19,13 +19,10 @@ import { fileURLToPath } from "node:url";
 import type { Page, TestInfo } from "@playwright/test";
 
 import { setEngineer } from "./engineer";
-import { apiSessions, expect, test } from "./pitwall";
+import { apiSessions, expect, NOW, test } from "./pitwall";
 
 /** Where the docs' screenshots go, one directory per viewport. */
 const SCREENS = fileURLToPath(new URL("../../docs/assets/screens", import.meta.url));
-
-/** After the newest replayed session, on the same day (UTC). */
-const NOW = new Date("2026-10-18T20:00:00Z");
 
 const RACE = "Circuit Gilles Villeneuve · 12-lap race";
 

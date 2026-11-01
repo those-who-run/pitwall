@@ -19,6 +19,12 @@
 //
 // The engineer is the live bucket (./engineer.ts). E2E_CONTAINER names the
 // container runtime (docker unless set; podman works as well).
+//
+// E2E_NO_LIVE_SESSION=1 leaves the open session out of the main pit wall, so no
+// card says "Running" under an "Idle" chip: the docs' screenshots set it
+// (playwright.docs.config.ts). Their fixed clock needs nothing here: the store's
+// sessions are dated by web/e2e/store/make.go, and the browser's clock is fixed
+// in ./pitwall.ts.
 import { execFileSync, spawn, type ChildProcess } from "node:child_process";
 import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
@@ -48,6 +54,12 @@ export const MISSING_LAP = 6;
 
 /** Sessions in the main store. */
 export const STORE_SESSIONS = STORES.main.length;
+
+/** The main pit wall's sources: STORES.main, without the open session when
+ * E2E_NO_LIVE_SESSION is 1. */
+export function mainSources(env: Record<string, string | undefined> = process.env): readonly string[] {
+  return env.E2E_NO_LIVE_SESSION === "1" ? STORES.main.filter((s) => s !== "replay-e2e-live") : STORES.main;
+}
 
 /** The other pit walls (#297 AC2, AC6, #299). */
 export type OtherStore = "short" | "empty" | "broken" | "compare";
@@ -210,7 +222,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     );
     await waitFor("logbook", 60_000, async () => (await fetch(`http://127.0.0.1:${healthPort}/healthz`)).ok);
 
-    const main = await startPitwall(bin, natsUrl, STORES.main);
+    const main = await startPitwall(bin, natsUrl, mainSources());
     pitwalls.push(main.process);
     // logbook answers once its services are up: the main pit wall's /healthz says.
     await waitFor("logbook's services", 30_000, async () => {

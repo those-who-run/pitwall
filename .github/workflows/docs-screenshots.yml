@@ -1,0 +1,71 @@
+name: Docs screenshots
+
+# The guide's screenshots (docs/pitwall.md; those-who-run/paddock#135): `make
+# docs-screenshots`, Playwright's docs config over the same set-up as CI's e2e
+# job (the built app on the Go API, NATS and the pinned logbook image serving
+# web/e2e/store's data), at the phone and desktop sizes. The pictures are an
+# artifact, `docs-screens`: download it and commit its contents under
+# docs/assets/screens/. Nothing here pushes. Run it by hand (Actions, Docs
+# screenshots, Run workflow), and on a PR that changes what makes the pictures.
+# Not a required check.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/docs-screenshots.yml
+      - web/playwright.docs.config.ts
+      - web/e2e/docs.screens.ts
+      - web/e2e/global-setup.ts
+      - web/e2e/pitwall.ts
+
+# Nothing by default; the job asks for what it uses.
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  docs-screenshots:
+    runs-on: ubuntu-latest
+    # As the e2e job: a hung step fails it instead of holding the runner.
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: "**/go.sum"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: web/.node-version
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: make web-deps
+        run: make web-deps
+      # Chromium and the libraries it needs, at the version package-lock.json pins.
+      - name: Install Chromium
+        working-directory: web
+        timeout-minutes: 10
+        run: npx playwright install --with-deps chromium
+      - name: make docs-screenshots
+        run: make docs-screenshots
+      - name: Keep the screenshots
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: docs-screens
+          path: docs/assets/screens
+          if-no-files-found: error
+          retention-days: 30
+      - name: Keep the traces of any failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: docs-screens-traces
+          path: web/test-results/docs
+          if-no-files-found: warn
+          retention-days: 14

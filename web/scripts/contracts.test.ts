@@ -1,14 +1,29 @@
 // The generated client's freshness check (those-who-run/paddock#127 R4): the tag
 // it reads, and how two trees are compared.
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 
 import { differences, EXAMPLES, files, goContracts, pinnedTag, pinsDiffer, takeFiles } from "./contracts.ts";
 
-function tree(entries: Record<string, string>): string {
+/** The temporary directories the tests made, removed once they have run. */
+const made: string[] = [];
+
+function tempDir(): string {
   const dir = mkdtempSync(join(tmpdir(), "contracts-test-"));
+  made.push(dir);
+  return dir;
+}
+
+afterAll(() => {
+  for (const dir of made) {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+function tree(entries: Record<string, string>): string {
+  const dir = tempDir();
   for (const [name, body] of Object.entries(entries)) {
     mkdirSync(join(dir, name, ".."), { recursive: true });
     writeFileSync(join(dir, name), body);
@@ -55,7 +70,7 @@ describe("the contracts check", () => {
   });
 
   it("takes the format cases from contracts at the pinned tag, as they are there (#128 R3)", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "contracts-test-"));
+    const dir = tempDir();
     const cases = '{"cases":[{"fn":"lapTime","args":[1],"out":"changed"}]}\n';
     const get = vi.fn(async (url: string | URL | Request) =>
       String(url).endsWith("/format/format-cases.json") ? new Response(cases) : new Response("{}"),

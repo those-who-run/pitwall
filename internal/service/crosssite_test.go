@@ -19,13 +19,16 @@ import (
 	"github.com/those-who-run/pitwall/internal/natstest"
 )
 
-// ADR 0014 point 8 (paddock): the pit wall has no login, and what keeps another
-// site's page from deleting a session through the viewer's browser is that
-// Connect takes only JSON or protobuf bodies by POST. A form or a text/plain
-// body, which a page can send cross-site with no preflight, is refused; a JSON
-// body needs a CORS preflight, which the pit wall never answers with an allow;
-// and a write is never a GET, which an <img> or a link could send. These tests
-// hold that, over the whole handler.
+// ADR 0014 point 8 (paddock): the pit wall has no login, and what keeps an
+// ordinary cross-site page from deleting a session through the viewer's browser
+// is that Connect takes only JSON or protobuf bodies by POST. A form or a
+// text/plain body, which a page can send cross-site with no preflight, is
+// refused; a JSON body needs a CORS preflight, which the pit wall never answers
+// with an allow; and a write is never a GET, which an <img> or a link could
+// send. These tests hold that, over the whole handler as it runs, the web app's
+// fallback included. A DNS-rebinding page is same-origin to the browser and is
+// not stopped by any of this: ADR 0014 accepts that, as a delete can be
+// restored.
 
 // writes are the methods with side effects.
 var writes = []string{
@@ -51,7 +54,9 @@ func writeServer(t *testing.T) (*httptest.Server, *logbooktest.Fake) {
 	fake.Set(logbooktest.SessionsRestore, func([]byte) (proto.Message, error) {
 		return &storev1.RestoreSessionResponse{Session: row, DataVersion: "3"}, nil
 	})
-	srv := httptest.NewServer(testHandler(t, Deps{API: api.New(nc, DefaultSources, "test", nil, 0)}))
+	// The handler as production builds it: the API, /healthz and the web app's
+	// fallback to index.html on every other path.
+	srv := httptest.NewServer(testHandler(t, Deps{API: api.New(nc, DefaultSources, "test", nil, 0), StaticDir: webApp(t)}))
 	t.Cleanup(srv.Close)
 	return srv, fake
 }

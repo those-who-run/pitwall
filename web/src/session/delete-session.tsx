@@ -3,61 +3,54 @@
 // leave the session out, and its page still opens, saying so, with Restore. So
 // the delete asks once, naming the session (track, car and date), and the
 // restore doesn't ask.
-import { RotateCcwIcon, Trash2Icon } from "lucide-react";
-import { lazy, Suspense, useState } from "react";
+import { Trash2Icon } from "lucide-react";
+import { lazy, Suspense, useRef, useState } from "react";
 
-import { useRestoreSession, type Session } from "@/api/hooks";
+import type { Session } from "@/api/hooks";
 import { Button } from "@/components/ui/button";
-import { sessionDate } from "@/lib/format";
 
-import { failure } from "./deleting";
+import { useFocus } from "./deleting";
 
-// The confirm carries the dialog: a chunk of its own, asked for on a press.
+// The confirm carries the dialog: a chunk of its own, asked for on a press. So
+// is the deleted note, which only a deleted session's page shows.
+const DeletedNoteChunk = lazy(() => import("./deleted-note").then((m) => ({ default: m.DeletedNote })));
 const DeleteConfirm = lazy(() => import("./delete-confirm").then((m) => ({ default: m.DeleteConfirm })));
 
 /** The page's Delete button, which opens the confirm. Only for a closed session
- * that isn't deleted: the page leaves it out otherwise. */
-export function DeleteSession({ session: s }: { session: Session }) {
+ * that isn't deleted: the page leaves it out otherwise. `focus` takes the
+ * focus to it, as after a restore; `onDeleted` is told of a delete. */
+export function DeleteSession({
+  session: s,
+  focus = false,
+  onDeleted,
+}: {
+  session: Session;
+  focus?: boolean;
+  onDeleted?: () => void;
+}) {
   const [open, setOpen] = useState(false);
+  const button = useRef<HTMLButtonElement>(null);
+  useFocus(button, focus);
   return (
     <>
-      <Button variant="outline" aria-haspopup="dialog" onClick={() => setOpen(true)}>
+      <Button ref={button} variant="outline" aria-haspopup="dialog" onClick={() => setOpen(true)}>
         <Trash2Icon aria-hidden="true" />
         Delete session
       </Button>
       {open && (
         <Suspense fallback={null}>
-          <DeleteConfirm session={s} onClose={() => setOpen(false)} />
+          <DeleteConfirm session={s} onClose={() => setOpen(false)} onDeleted={onDeleted} />
         </Suspense>
       )}
     </>
   );
 }
 
-/** The note a deleted session's page leads with, and Restore. */
-export function DeletedNote({ session: s }: { session: Session }) {
-  const restore = useRestoreSession(s.session_id);
+/** The note a deleted session's page leads with, and Restore (./deleted-note). */
+export function DeletedNote(props: Parameters<typeof DeletedNoteChunk>[0]) {
   return (
-    <section
-      aria-label="Deleted"
-      data-slot="deleted-note"
-      className="flex flex-col items-start gap-2 rounded-md border bg-surface p-4"
-    >
-      <p className="font-semibold">
-        Deleted {s.deleted_at != null && <span className="font-normal text-muted">{sessionDate(s.deleted_at)}</span>}
-      </p>
-      <p className="text-sm text-muted">
-        This session isn&apos;t in the session list or lap compare. Restore puts it back.
-      </p>
-      {restore.error && (
-        <p role="alert" className="text-sm">
-          {failure(restore.error, "restore")}
-        </p>
-      )}
-      <Button variant="outline" disabled={restore.isPending} onClick={() => restore.mutate()}>
-        <RotateCcwIcon aria-hidden="true" />
-        {restore.isPending ? "Restoring…" : "Restore"}
-      </Button>
-    </section>
+    <Suspense fallback={null}>
+      <DeletedNoteChunk {...props} />
+    </Suspense>
   );
 }

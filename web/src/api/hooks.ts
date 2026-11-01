@@ -4,7 +4,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import * as adapt from "./adapt";
-import type { EngineStatus } from "./adapt";
+import type { EngineStatus, Session } from "./adapt";
 import { ApiError, client, health } from "./client";
 
 export { ApiError } from "./client";
@@ -237,10 +237,17 @@ export function isNotFound(error: unknown): boolean {
 
 /** Deletes a closed session, or restores a deleted one (DeleteSession and
  * RestoreSession, ADR 0014 in paddock). The answer is the session as it now is,
- * which the session page shows at once; then every list is asked again, so
- * the session list and lap compare leave it out, or show it again. Deleting an
- * open session is a 409 ApiError. */
-function useSessionWrite(id: string, method: "deleteSession" | "restoreSession") {
+ * which the session page shows at once (a read of it still in flight is
+ * cancelled first, so it can't land over the answer); then every list is asked
+ * again, so the session list and lap compare leave it out, or show it again.
+ * `onDone` is called with the answer even when the caller has unmounted, as
+ * the delete's confirm has by then. Deleting an open session is a 409
+ * ApiError; a 404 asks for the session again, so its page says it is gone. */
+function useSessionWrite(
+  id: string,
+  method: "deleteSession" | "restoreSession",
+  onDone?: (session: Session) => void,
+) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
@@ -251,6 +258,8 @@ function useSessionWrite(id: string, method: "deleteSession" | "restoreSession")
       return adapt.session(session);
     },
     onSuccess: async (session) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.session(id), exact: true });
+      onDone?.(session);
       queryClient.setQueryData(queryKeys.session(id), session);
       // Everything under "sessions" but this one, which is current: the lists,
       // lap compare's other sessions and this session's laps.
@@ -259,15 +268,20 @@ function useSessionWrite(id: string, method: "deleteSession" | "restoreSession")
         predicate: (q) => !(q.queryKey.length === 2 && q.queryKey[1] === id),
       });
     },
+    onError: async (error) => {
+      if (isNotFound(error)) {
+        await queryClient.invalidateQueries({ queryKey: queryKeys.session(id), exact: true });
+      }
+    },
   });
 }
 
 /** Deletes the session (DeleteSession). */
-export function useDeleteSession(id: string) {
-  return useSessionWrite(id, "deleteSession");
+export function useDeleteSession(id: string, onDone?: (session: Session) => void) {
+  return useSessionWrite(id, "deleteSession", onDone);
 }
 
 /** Restores the deleted session (RestoreSession). */
-export function useRestoreSession(id: string) {
-  return useSessionWrite(id, "restoreSession");
+export function useRestoreSession(id: string, onDone?: (session: Session) => void) {
+  return useSessionWrite(id, "restoreSession", onDone);
 }

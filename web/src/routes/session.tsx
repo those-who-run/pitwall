@@ -180,6 +180,8 @@ export function Component() {
   const [picks, setPicks] = usePicks();
   const known = picks.filter((p) => rows?.some((l) => l.lap === p));
   const [highlight, setHighlight] = useState<number | null>(null);
+  // Where the focus goes after a delete (Restore) or a restore (Delete session).
+  const [focus, setFocus] = useState<"restore" | "delete" | null>(null);
 
   const missing = session.error instanceof ApiError && session.error.status === 404;
   usePageTitle(session.data?.title ?? (missing ? "Session not found" : `Session ${id}`));
@@ -210,7 +212,9 @@ export function Component() {
   const lapRows = rows ?? [];
   return (
     <article className="space-y-6">
-      {s.deleted_at != null && <DeletedNote session={s} />}
+      {s.deleted_at != null && (
+        <DeletedNote session={s} focus={focus === "restore"} onRestored={() => setFocus("delete")} />
+      )}
       <SessionHero
         session={s}
         live={live?.state}
@@ -254,7 +258,7 @@ export function Component() {
       </section>
       {s.closed && s.deleted_at == null && (
         <section aria-label="Delete" className="border-t pt-4">
-          <DeleteSession session={s} />
+          <DeleteSession session={s} focus={focus === "delete"} onDeleted={() => setFocus("restore")} />
         </section>
       )}
     </article>

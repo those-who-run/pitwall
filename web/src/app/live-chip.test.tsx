@@ -122,7 +122,7 @@ describe("the popover (R2, R3, R9)", () => {
     expect(panel.textContent).toContain(`Engineer${KIT_VERSION}`);
     expect(panel.textContent).toContain("TelemetryConnected");
     expect(panel.textContent).toContain("VoiceNot in the voice channel");
-    expect(panel.textContent).toContain(`Pit wall ${KIT_VERSION} · Read-only`);
+    expect(panel.textContent).toContain(`Pit wall ${KIT_VERSION}`);
     expect(panel.textContent).not.toContain("deploy");
 
     await userEvent.click(screen.getByRole("link", { name: "Open the live session" }));
@@ -135,7 +135,7 @@ describe("the popover (R2, R3, R9)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Engineer offline" }));
     const panel = await screen.findByRole("dialog", { name: "The engineer" });
     expect(panel.textContent).toContain("The sessions still work");
-    expect(panel.textContent).toContain(`Pit wall ${KIT_VERSION} · Read-only`);
+    expect(panel.textContent).toContain(`Pit wall ${KIT_VERSION}`);
     expect(screen.queryByRole("link", { name: "Open the live session" })).toBeNull();
   });
 
@@ -146,7 +146,7 @@ describe("the popover (R2, R3, R9)", () => {
     await userEvent.click(chip);
     const panel = await screen.findByRole("dialog");
     expect(panel.textContent).toContain("Engineer0.1.14");
-    expect(panel.textContent).toContain("Pit wall 0.2.0 · Read-only");
+    expect(panel.textContent).toContain("Pit wall 0.2.0");
     expect(panel.textContent).not.toContain("deploy");
   });
 

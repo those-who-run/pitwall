@@ -76,9 +76,10 @@ type Deps struct {
 // Handler serves everything on one origin (paddock#124 R9): PitwallService over
 // Connect, with GET for every read, POST only for the two writes, and gzip over
 // gzipOver; GET /healthz; and the web app, from StaticDir, on every other path.
-// It answers no CORS preflight: with Connect taking only JSON or protobuf
-// bodies, that is what keeps another site's page from writing (ADR 0014 point
-// 8 in paddock, crosssite_test.go).
+// It answers no CORS preflight, and Connect takes only JSON or protobuf
+// bodies, so an ordinary cross-site page can't write (crosssite_test.go). A
+// DNS-rebinding page is same-origin to the browser and isn't stopped: ADR 0014
+// point 8 in paddock accepts that, as a delete can be restored.
 func Handler(d Deps) http.Handler {
 	mux := http.NewServeMux()
 	server := connect.NewServer()

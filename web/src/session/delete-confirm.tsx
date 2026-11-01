@@ -15,8 +15,16 @@ import {
 
 import { failure, sessionName } from "./deleting";
 
-export function DeleteConfirm({ session: s, onClose }: { session: Session; onClose: () => void }) {
-  const del = useDeleteSession(s.session_id);
+export function DeleteConfirm({
+  session: s,
+  onClose,
+  onDeleted,
+}: {
+  session: Session;
+  onClose: () => void;
+  onDeleted?: () => void;
+}) {
+  const del = useDeleteSession(s.session_id, onDeleted);
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent>

@@ -6,7 +6,7 @@ This page came over from v1 with the web app (those-who-run/paddock#120). "Runni
 
 ## Pages
 
-The pit wall is a React app over the session store, served with its read-only
+The pit wall is a React app over the session store, served with its
 data API by `those-who-run pitwall` on port 9852 (`--port` or
 `GT7_PITWALL_PORT`, `--address` to bind; ADR 0003). One column, so it works on
 a phone straight after a race:
@@ -152,11 +152,13 @@ browser's cache works. Its two writes, `DeleteSession` and `RestoreSession`
   `.restore`. Each changes `logbook`'s `data_version` (a repeat changes
   nothing), so every read's ETag changes and the list drops or shows the
   session again. The answer carries `Cache-Control: no-store` and no ETag.
-  There is no login (ADR 0011), so what keeps another site's page from
-  deleting a session through a browser on the LAN is that the writes take only
-  a JSON or protobuf body by POST: a form or `text/plain` body is 415, a GET
-  405, and a JSON body needs a CORS preflight, which the pit wall answers with
-  no allow headers (ADR 0014 point 8, `internal/service/crosssite_test.go`).
+  There is no login (ADR 0011). The writes take only a JSON or protobuf body
+  by POST: a form or `text/plain` body is 415, a GET 405, and a JSON body from
+  another origin needs a CORS preflight, which the pit wall answers with no
+  allow headers (`internal/service/crosssite_test.go`). That stops an ordinary
+  cross-site page, but not all of them: a DNS-rebinding page is same-origin
+  as far as the browser knows, needs no preflight, and isn't stopped. ADR 0014
+  (point 8) accepts that risk, because a delete can be restored.
 - **The engineer's status** comes from a watch on `ecu.status.live`,
   `ecu.session.live` and `radio.status.live` in the `live` bucket, kept open for
   the server's life (those-who-run/paddock#125). Only the `live` source's keys
@@ -203,7 +205,7 @@ command that writes the store (`tracks backfill`, `post`, `rebuild-best`,
 `replay --store` into it) refuses with exit code 1 while it does. Use the pit
 wall, or stop the engineer first. The engineer likewise refuses to start while
 one of those is running.
-The pit wall only reads and never takes the lock.
+The pit wall never takes the lock.
 
 ## The pitwall image
 

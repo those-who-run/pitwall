@@ -486,6 +486,8 @@ describe("delete and restore", () => {
 
     const note = await screen.findByRole("region", { name: "Deleted" });
     expect(note.textContent).toContain("isn't in the session list or lap compare");
+    // The focus goes to Restore, not back to the page's top.
+    await vi.waitFor(() => expect(document.activeElement).toBe(within(note).getByRole("button", { name: "Restore" })));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(screen.queryByRole("button", { name: "Delete session" })).toBeNull();
     expect(writes(fetch)).toEqual(["/twr.pitwall.v1.PitwallService/DeleteSession"]);
@@ -498,7 +500,8 @@ describe("delete and restore", () => {
 
     await user.click(within(note).getByRole("button", { name: "Restore" }));
     await vi.waitFor(() => expect(screen.queryByRole("region", { name: "Deleted" })).toBeNull());
-    expect(await screen.findByRole("button", { name: "Delete session" })).toBeTruthy();
+    const again = await screen.findByRole("button", { name: "Delete session" });
+    await vi.waitFor(() => expect(document.activeElement).toBe(again));
     expect(writes(fetch)).toEqual([
       "/twr.pitwall.v1.PitwallService/DeleteSession",
       "/twr.pitwall.v1.PitwallService/RestoreSession",
@@ -529,6 +532,18 @@ describe("delete and restore", () => {
     await user.click(within(dialog).getByRole("button", { name: "Delete" }));
     expect((await within(dialog).findByRole("alert")).textContent).toContain("still open");
     expect(screen.queryByRole("region", { name: "Deleted" })).toBeNull();
+  });
+
+  it("shows the not-found state when the session is gone by the delete", async () => {
+    const user = userEvent.setup();
+    const api: Api = { session: SESSIONS.raceFinished, laps: LAPS, writeError: { status: 404, error: "no such session" } };
+    serve(api);
+    renderAt("/sessions/20261018-191204");
+    await user.click(await screen.findByRole("button", { name: "Delete session" }));
+    const dialog = await screen.findByRole("dialog");
+    api.session = { status: 404, error: "no such session" };
+    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+    expect(await screen.findByText("No session 20261018-191204.")).toBeTruthy();
   });
 
   it("says why a restore failed", async () => {

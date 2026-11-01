@@ -20,10 +20,16 @@ test("a second visit to a session page within 5 s gets 304s for its data calls (
   // the wire. Chromium hands the page a revalidated answer as the cached 200, and
   // Playwright's response events report that; the DevTools protocol's extra info
   // has the pit wall's own status line, the 304 DevTools shows.
+  //
+  // The two events come down different pipes (requestWillBeSent from the page's
+  // renderer, responseReceivedExtraInfo from the network service), so Chromium
+  // does not order them: on a busy runner a 304 from localhost can report its
+  // status before the page has said what it asked for. Each is kept by request id
+  // and the two are joined when the test reads them, in whatever order they came.
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("Network.enable");
   const methods = new Map<string, string>();
-  const statuses: Record<string, number[]> = {};
+  const codes = new Map<string, number[]>();
   cdp.on("Network.requestWillBeSent", (e) => {
     const call = connectCall(e.request.url);
     if (call && call.method !== "GetEngineStatus") {
@@ -31,18 +37,17 @@ test("a second visit to a session page within 5 s gets 304s for its data calls (
     }
   });
   cdp.on("Network.responseReceivedExtraInfo", (e) => {
-    const method = methods.get(e.requestId);
-    if (method) {
-      (statuses[method] ??= []).push(e.statusCode);
-    }
+    codes.set(e.requestId, [...(codes.get(e.requestId) ?? []), e.statusCode]);
   });
+  const statuses = (method: string) =>
+    [...methods].filter(([, m]) => m === method).flatMap(([id]) => codes.get(id) ?? []);
   const start = Date.now();
   await page.goto(`/sessions/${s!.session_id}`);
   await expect(page.locator("tbody tr[data-lap]")).toHaveCount(6);
   expect(Date.now() - start).toBeLessThan(5_000);
   // The browser sends the pit wall's ETag back, and nothing has changed.
-  await expect.poll(() => statuses.GetSession).toEqual([304]);
-  await expect.poll(() => statuses.ListLaps).toEqual([304]);
+  await expect.poll(() => statuses("GetSession")).toEqual([304]);
+  await expect.poll(() => statuses("ListLaps")).toEqual([304]);
 });
 
 test("after a replay through ecu: the engineer is idle and the session is closed (paddock#125 AC5)", async ({

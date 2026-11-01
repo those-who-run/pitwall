@@ -9,7 +9,8 @@ unless it says v1's.
 The pit wall is on one address, the deployment overlay's: v2's pit wall took
 v1's address, and v1's pit wall is gone (ADR 0012). A results card's old link,
 `/?session=<id>`, keeps working there, for v2's sessions and for v1's once
-`logbook` has imported them, as they keep v1's ids (ADR 0009).
+`logbook` has imported them, as they keep v1's ids (ADR 0009), and opens its
+session whether it was deleted or not.
 
 ## Pages
 
@@ -55,13 +56,10 @@ not a page a driver uses.
 The screenshots are still v1's pit wall: v1's docs config made them
 (`make docs-screenshots`, those-who-run/those-who-run#381) before the web app
 moved here. v2 has no such target yet: `web/playwright.docs.config.ts` and
-`web/e2e/docs.screens.ts` came over, but the e2e set-up no longer reads the
-fixed clock they need, so the pictures have not been made against v2. The pages
-they show are the same pages, but the lap compare pictures predate the track
-map.
-
-A results card's old link, `/?session=<id>`, opens that session, deleted or
-not.
+`web/e2e/docs.screens.ts` came over, but the e2e set-up has no switch to leave
+out its open session, and the docs spec's clock is still v1's, so the pictures
+have not been made against v2. The pages they show are the same pages, but the
+lap compare pictures predate the track map.
 
 A closed session's page has **Delete**, which asks first, naming the
 session's track, car and date. A deleted session is left out of the list and
@@ -97,9 +95,12 @@ make web-build
 TWR_NATS_URL=nats://127.0.0.1:4222 TWR_PITWALL_STATIC_DIR=web/dist go run ./cmd/pitwall   # http://localhost:8080
 ```
 
-Its NATS needs `logbook` on it for the sessions, and `ecu` writing the `live`
-bucket for the chip. paddock's compose stack (`deploy/compose`) has both, with
-its NATS on `127.0.0.1:4222`, and runs this pit wall too: `make pitwall` in
+Its NATS needs `logbook` on it for the sessions, and a live `ecu` writing the
+`live` bucket for the chip. paddock's compose stack (`deploy/compose`) has
+`logbook`, with its NATS on `127.0.0.1:4222`, but no live `ecu`: its one `ecu`
+is the one-shot `replay` service, which writes `ecu.status.replay-<run>`, and
+the chip reads only the live source's keys, so under compose the chip says
+"Engineer offline". It runs this pit wall too: `make pitwall` in
 paddock starts the image at http://localhost:9852 (host port 9852 to the
 container's 8080, v1's port), on the sessions of `TWR_PITWALL_SRC`,
 `replay-compose` by default, which is what its `make replay` stores. Its

@@ -1,6 +1,6 @@
 # Design guide
 
-This guide came over from v1 with the web app (those-who-run/paddock#120); a bare `#N` in it is v1's, those-who-run/those-who-run#N, and so is an ADR named here: v1's records, which paddock's [v1 records](https://github.com/those-who-run/paddock/blob/main/docs/adr/README.md#v1s-records) keep in force for v2.
+This guide came over from v1 with the web app (those-who-run/paddock#120); a bare `#N` in it is v1's, those-who-run/those-who-run#N, and so is an ADR named here: v1's records, which paddock's [v1 records](https://github.com/those-who-run/paddock/blob/main/docs/adr/README.md#v1s-records) say which parts still hold for v2.
 
 The working reference for the web app: the pit wall and the dashboards. The
 rules are in v1's [ADR 0004](https://github.com/those-who-run/those-who-run/blob/v1.0.0/docs/adr/0004-design-language.md), which holds for `pitwall` and `dash` as written. This page holds the
@@ -198,7 +198,8 @@ Rules:
   for the results card (those-who-run/paddock#128).
 - Fuel is a share of the tank (`100 × amount / fuel_capacity`) when the session
   has a `fuel_capacity`. GT7 sends a level and a capacity, never litres: in all
-  25 recordings in `tests/fixtures/` (16 cars) the capacity is 100 while
+  25 of v1's recordings (`tests/fixtures/` in those-who-run/those-who-run, 16
+  cars) the capacity is 100 while
   driving, so one of GT7's units has been 1% of a tank. With no capacity the
   page shows the raw amount, labelled "units" (#298).
 - The cases in contracts' `format/format-cases.json` are the definition: Vitest

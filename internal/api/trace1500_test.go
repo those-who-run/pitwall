@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"flag"
 	"io"
 	"math"
@@ -9,6 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
@@ -90,5 +92,19 @@ func TestATraceOf1500PointsGoesToTypeScript(t *testing.T) {
 	}
 	if !proto.Equal(&want, &got) {
 		t.Errorf("%s is not what the API answers: go test ./internal/api -run 1500 -update", trace1500)
+	}
+	// And the same JSON, key for key: protojson reads proto names (speed_kph) as
+	// well as JSON names (speedKph), so proto.Equal alone would pass a file, or an
+	// answer, in the names the web app doesn't read. Not byte for byte: protojson
+	// varies its whitespace.
+	var wantJSON, gotJSON any
+	if err := json.Unmarshal(b, &wantJSON); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(body, &gotJSON); err != nil {
+		t.Fatal(err)
+	}
+	if d := cmp.Diff(wantJSON, gotJSON); d != "" {
+		t.Errorf("%s is not the API's JSON (-file +answer):\n%s\ngo test ./internal/api -run 1500 -update", trace1500, d)
 	}
 }

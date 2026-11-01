@@ -34,7 +34,7 @@ import (
 	"github.com/those-who-run/pitwall/internal/natstest"
 )
 
-// The examples under testdata/contracts are contracts v0.2.9's
+// The examples under testdata/contracts are contracts' (at the version go.mod requires)
 // examples/store/v1 and examples/pitwall/v1, copied unchanged: one session (the
 // Suzuka East pit-stop race) as logbook answers it and as the API answers it.
 

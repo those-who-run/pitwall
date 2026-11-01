@@ -168,6 +168,7 @@ func Session(row *storev1.SessionRow) *pitwallv1.Session {
 		RestartLaps:   restartLaps(s),
 		CardPostedAt:  row.GetCardPostedAt(),
 		FromV1Rows:    row.FromV1Rows,
+		DeletedAt:     row.GetDeletedAt(),
 	}
 	out.Continued = len(s.GetGaps()) > 0
 	if closed {

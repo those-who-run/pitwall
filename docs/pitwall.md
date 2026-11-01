@@ -40,8 +40,13 @@ a phone straight after a race:
 `/_kit` is the component kit's review page (ADR 0004), not a page a driver
 uses.
 
-A results card's old link, `/?session=<id>`, opens that session. The pit wall
-only reads: the index is opened read-only and no session data is written.
+A results card's old link, `/?session=<id>`, opens that session, deleted or
+not.
+
+A closed session's page has **Delete**, which asks first, naming the
+session's track, car and date. A deleted session is left out of the list and
+lap compare, but nothing is removed: its page still opens, says it was
+deleted, and has **Restore**, which puts it back (paddock's ADR 0014).
 
 ## The shell
 
@@ -104,9 +109,10 @@ the engineer's status is live while the sessions are the copy;
 ## The data API
 
 The API is `twr.pitwall.v1.PitwallService`, a Connect service defined in
-`contracts` (contracts#41), at `/twr.pitwall.v1.PitwallService/<Method>`. Every
-method has no side effects, so the web app calls it with GET and the browser's
-cache works.
+`contracts` (contracts#41), at `/twr.pitwall.v1.PitwallService/<Method>`. Its
+reads have no side effects, so the web app calls them with GET and the
+browser's cache works. Its two writes, `DeleteSession` and `RestoreSession`
+(paddock's ADR 0014), are POST only and never cached.
 
 | Method | What it answers | v1's route |
 |---|---|---|
@@ -116,6 +122,8 @@ cache works.
 | `GetTrace` | One lap's speed, throttle, brake, gear, RPM and position against time | `GET /api/v1/sessions/{id}/laps/{lap}/trace` |
 | `ListSameTrack` | The other sessions at the same track, for lap compare | `GET /api/v1/sessions/{id}/same-track` |
 | `GetEngineStatus` | What the engineer is doing now, for the live chip | `GET /api/engine/status` |
+| `DeleteSession` (POST) | Deletes a closed session, softly: `logbook` keeps its rows and lap files, the list and lap compare leave it out, and its page still opens, with `deleted_at` set | none |
+| `RestoreSession` (POST) | Brings a deleted session back | none |
 | `GET /healthz` (plain HTTP) | `ok`, `version`, and whether `nats` and `logbook` answered | `GET /healthz` |
 
 - **From `logbook`.** Each data method asks `logbook`'s micro endpoints
@@ -137,8 +145,18 @@ cache works.
   answers `unchanged` at next to no cost, and the pit wall answers 304 with no
   body. Answers over 1 KB are gzipped when the browser takes it.
 - **Errors** are Connect's: a session or lap that isn't there is `not_found`, a
-  bad argument `invalid_argument`, and `logbook` not answering within 2 s
+  bad argument `invalid_argument`, deleting an open session
+  `failed_precondition`, and `logbook` not answering within 2 s
   `unavailable`. The web app is served all the same.
+- **Deleting and restoring** ask `logbook`'s `svc.logbook.sessions.delete` and
+  `.restore`. Each changes `logbook`'s `data_version` (a repeat changes
+  nothing), so every read's ETag changes and the list drops or shows the
+  session again. The answer carries `Cache-Control: no-store` and no ETag.
+  There is no login (ADR 0011), so what keeps another site's page from
+  deleting a session through a browser on the LAN is that the writes take only
+  a JSON or protobuf body by POST: a form or `text/plain` body is 415, a GET
+  405, and a JSON body needs a CORS preflight, which the pit wall answers with
+  no allow headers (ADR 0014 point 8, `internal/service/crosssite_test.go`).
 - **The engineer's status** comes from a watch on `ecu.status.live`,
   `ecu.session.live` and `radio.status.live` in the `live` bucket, kept open for
   the server's life (those-who-run/paddock#125). Only the `live` source's keys

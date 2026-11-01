@@ -3,7 +3,10 @@
 // answer and maps it to the API's messages (the maintainer's decision D6,
 // 2026-10-31), with an ETag from logbook's data_version and a 304 when the
 // browser already has the answer. GetEngineStatus answers from the live KV
-// (paddock#125, internal/engine). The server holds no data of its own.
+// (paddock#125, internal/engine). Its two writes, DeleteSession and
+// RestoreSession (ADR 0014 in paddock), ask logbook to delete a session softly
+// or bring it back; they are POST only and never cached. The server holds no
+// data of its own.
 package api
 
 import (
@@ -291,12 +294,53 @@ func (s *Server) ListSameTrack(ctx context.Context, req *pitwallv1.ListSameTrack
 // GetEngineStatus is the engineer's status from the live KV, never cached
 // (paddock#125 R5).
 func (s *Server) GetEngineStatus(ctx context.Context, _ *pitwallv1.GetEngineStatusRequest) (*pitwallv1.GetEngineStatusResponse, error) {
-	if info, ok := connect.CallInfoForServerContext(ctx); ok {
-		info.ResponseHeader().Set("Cache-Control", "no-store")
-	}
+	noStore(ctx)
 	status := &pitwallv1.EngineStatus{Activity: pitwallv1.Activity_ACTIVITY_OFFLINE}
 	if s.engine != nil {
 		status = s.engine.Status()
 	}
 	return &pitwallv1.GetEngineStatusResponse{Status: status}, nil
+}
+
+// DeleteSession deletes a closed session, softly (svc.logbook.sessions.delete,
+// ADR 0014): logbook keeps its rows and lap files, so RestoreSession brings it
+// back. logbook's 409, an open session, is failed_precondition. A delete
+// changes logbook's data_version, so every read's ETag changes with it.
+func (s *Server) DeleteSession(ctx context.Context, req *pitwallv1.DeleteSessionRequest) (*pitwallv1.DeleteSessionResponse, error) {
+	if err := needSession(req.GetSessionId()); err != nil {
+		return nil, err
+	}
+	noStore(ctx)
+	var resp storev1.DeleteSessionResponse
+	err := s.store.call(ctx, subjectSessionsDelete, &storev1.DeleteSessionRequest{
+		Sources: s.sources, SessionId: req.GetSessionId(),
+	}, &resp)
+	if err != nil {
+		return nil, err
+	}
+	return &pitwallv1.DeleteSessionResponse{Session: Session(resp.GetSession())}, nil
+}
+
+// RestoreSession brings a deleted session back (svc.logbook.sessions.restore,
+// ADR 0014): logbook clears its deleted_at, so the list shows it again.
+func (s *Server) RestoreSession(ctx context.Context, req *pitwallv1.RestoreSessionRequest) (*pitwallv1.RestoreSessionResponse, error) {
+	if err := needSession(req.GetSessionId()); err != nil {
+		return nil, err
+	}
+	noStore(ctx)
+	var resp storev1.RestoreSessionResponse
+	err := s.store.call(ctx, subjectSessionsRestore, &storev1.RestoreSessionRequest{
+		Sources: s.sources, SessionId: req.GetSessionId(),
+	}, &resp)
+	if err != nil {
+		return nil, err
+	}
+	return &pitwallv1.RestoreSessionResponse{Session: Session(resp.GetSession())}, nil
+}
+
+// noStore marks the answer, an error included, as never to be kept by a cache.
+func noStore(ctx context.Context) {
+	if info, ok := connect.CallInfoForServerContext(ctx); ok {
+		info.ResponseHeader().Set("Cache-Control", "no-store")
+	}
 }

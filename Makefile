@@ -20,6 +20,10 @@ COVERAGE_FLOOR := 90
 # testdata and vendor. And web/, the web app, whose node_modules holds no Go of ours.
 GO_FILES = $(shell find . -path ./web -prune -o -name '*.go' -not -path '*/.*' -not -path '*/testdata/*' -not -path '*/vendor/*' -print)
 BUILD := build
+# The module's packages, without any npm put in web/node_modules (`make web-deps`):
+# one of them (flatted) ships a Go package, which would be vetted, tested at 0%
+# against the coverage floor and scanned as if it were ours. Evaluated when used.
+GO_PKGS = $(shell go list ./... | grep -v /web/node_modules/)
 
 .PHONY: help
 help:
@@ -31,11 +35,13 @@ help:
 	@echo "hooks     - install the commit hooks; a new clone or worktree runs it once"
 	@echo "fmt-check, tidy, vet, go-test, build, vuln - the Go checks one at a time"
 	@echo "links     - every internal link and anchor in the Markdown resolves (offline)"
+	@echo "go-scripts - the Go programs run by hand (web/e2e/store/make.go): gofmt and go vet"
 	@echo "guard     - .claude/ holds those-who-run/.github's guard and settings at the pinned commit"
 	@echo "web-check - the web app: ESLint, tsc, the API client's freshness, Vitest, the build, the bundle budget (CI's web job)"
 	@echo "web-build - build the web app into web/dist"
 	@echo "web-dev   - Vite's dev server on http://localhost:5173, the API proxied to PITWALL_URL"
 	@echo "web-deps  - install web/node_modules from web/package-lock.json (npm ci)"
+	@echo "web-e2e   - Playwright over the built app, the Go API, NATS and logbook (needs Go, Docker and Chromium; CI's e2e job)"
 
 # go.yml's order: gofmt, tidy, vet, golangci-lint, the tests, build, govulncheck.
 .PHONY: check
@@ -48,10 +54,10 @@ check: prereqs
 .PHONY: test
 test: go-test test-repo
 
-# The repository's own checks apart from the Go tests: links, the guard copy, and
-# the tests in tests/.
+# The repository's own checks apart from the Go tests: links, the guard copy, the
+# Go programs run by hand, and the tests in tests/.
 .PHONY: test-repo
-test-repo: links guard
+test-repo: links guard go-scripts
 	$(PY) -m unittest discover -s tests
 
 # Go at go.mod's toolchain version (or a GOTOOLCHAIN that fetches it), gofmt, cgo's
@@ -84,7 +90,7 @@ tidy:
 
 .PHONY: vet
 vet:
-	go vet ./...
+	go vet $(GO_PKGS)
 
 .PHONY: lint
 lint:
@@ -96,18 +102,30 @@ lint:
 .PHONY: go-test
 go-test:
 	@mkdir -p $(BUILD)
-	CGO_ENABLED=1 go test -race -shuffle=on -covermode=atomic -coverprofile=$(BUILD)/cover.out -v ./... > $(BUILD)/test.log 2>&1; \
+	CGO_ENABLED=1 go test -race -shuffle=on -covermode=atomic -coverprofile=$(BUILD)/cover.out -v $(GO_PKGS) > $(BUILD)/test.log 2>&1; \
 	  status=$$?; grep -v -E '^(=== |\s+--- PASS|--- PASS)' $(BUILD)/test.log; exit $$status
 	@if grep -E '^\s*--- SKIP' $(BUILD)/test.log; then echo "a skipped test fails: fix it or remove it" >&2; exit 1; fi
 	@$(PY) scripts/go_coverage.py $(BUILD)/cover.out $(COVERAGE_FLOOR)
 
 .PHONY: build
 build:
-	go build ./...
+	go build $(GO_PKGS)
 
 .PHONY: vuln
 vuln:
-	$(GO_TOOL) $(GOVULNCHECK) ./...
+	$(GO_TOOL) $(GOVULNCHECK) $(GO_PKGS)
+
+# The Go programs run by hand, outside the module's packages (`//go:build ignore`,
+# under web/, which the Go checks leave out): web/e2e/store/make.go. Formatted,
+# and vetted, which compiles them, so one that has rotted fails here (CI's test
+# job) rather than when someone next runs it.
+GO_SCRIPTS := web/e2e/store/make.go
+
+.PHONY: go-scripts
+go-scripts:
+	@unformatted=$$(gofmt -l $(GO_SCRIPTS)) || exit 1; \
+	if [ -n "$$unformatted" ]; then echo "not formatted (gofmt -w):" $$unformatted >&2; exit 1; fi
+	@for f in $(GO_SCRIPTS); do go vet "$$f" || exit 1; done
 
 .PHONY: links
 links:
@@ -120,7 +138,7 @@ guard:
 # The web app (web/, from v1 with those-who-run/paddock#120). Node is the version in
 # web/.node-version, and the packages are web/package-lock.json's, installed with
 # npm ci. A missing Node, or another version, fails rather than building with it.
-# Playwright (web/e2e/) comes back with those-who-run/paddock#130.
+# Playwright (web/e2e/) is web-e2e.
 WEB_DEPS := web/node_modules/.package-lock.json
 
 .PHONY: web-node
@@ -155,3 +173,12 @@ web-check: web-node $(WEB_DEPS)
 	cd web && npm test
 	cd web && npx vite build
 	cd web && npm run budget
+
+# The end-to-end tests (web/e2e/, those-who-run/paddock#130): web/dist on the Go API
+# (built from this checkout), over NATS and the pinned logbook image serving
+# web/e2e/store's data, in Chromium at the three viewports. Needs Go, Docker (or
+# E2E_CONTAINER=podman) and Playwright's Chromium (`cd web && npx playwright install
+# chromium`). Not part of make check: CI's e2e job runs it.
+.PHONY: web-e2e
+web-e2e: web-build
+	cd web && npm run e2e

@@ -1,91 +1,62 @@
-// A session still being driven, for the live session page (#298 AC5): the global
-// setup copies a replayed session into the store as an open one (no summary.json,
-// as the engineer leaves it mid-session) with its last laps held back, and a test
-// adds a held-back lap the way the engineer commits one, a row in the index's
-// `laps` table. The pit wall reads the index read-only and keys its ETags on the
-// index's write time, so the next poll sees the new lap.
+// The logbook store the specs run over (those-who-run/paddock#130, the maintainer's
+// decision D8): web/e2e/store/data, made by web/e2e/store/make.go from v1's
+// recordings replayed through ecu, which store.json describes. The pinned logbook
+// image serves it in CI; no ecu runs there.
 //
-// Only the live spec writes, and only to this session, so the other specs' view of
-// the store never changes under them.
-import { copyFileSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
-import { DatabaseSync } from "node:sqlite";
+// Each recording is a source of its own, and each pit wall the global setup starts
+// shows the sources of one of v1's stores (STORES), so one logbook stands in for
+// all of them.
+//
+// The live session page (#298 AC5): the store holds the pit stop's recording once
+// more as an open session, its first LIVE_LAPS_AT_START laps stored and ecu never
+// having ended it. `addLap` publishes what ecu published for its next lap
+// (store/live-lap.jsonl.gz) to the run's NATS, and logbook stores it as it would a
+// live lap: the next poll sees it.
+import { readFileSync } from "node:fs";
 
-/** The open session's id: what the stub engineer's "live-store" scenario drives. */
-export const LIVE_SESSION_ID = "20261015-e2e-live";
+import { publishCaptured, readCaptured } from "./nats";
 
-/** Laps the live session starts with; the rest are held back for addLap. */
-export const LIVE_LAPS_AT_START = 4;
+export const STORE_DIR = new URL("./store/", import.meta.url);
 
-function index(data: string): DatabaseSync {
-  const db = new DatabaseSync(join(data, "index.sqlite"));
-  db.exec("PRAGMA busy_timeout = 5000");
-  return db;
+/** store.json, as web/e2e/store/make.go writes it. */
+export interface StoreManifest {
+  sessions: Record<string, string>;
+  live_laps_at_start: number;
+  events_seq: number;
+  frames_seq: number;
+  ecu_at_the_end: { src: string; status: Record<string, unknown>; session: Record<string, unknown> | null };
 }
 
-/** Copies `source` (a closed session) into the store as LIVE_SESSION_ID, open,
- * with its first LIVE_LAPS_AT_START laps. A second before its source, so the
- * source is still the newest session, and both are on the same day. */
-export function makeLiveSession(data: string, source: string): void {
-  const db = index(data);
-  try {
-    const row = db.prepare("SELECT * FROM sessions WHERE id = ?").get(source) as Record<string, unknown>;
-    if (!row) {
-      throw new Error(`no session ${source} in the store`);
-    }
-    const cols = Object.keys(row);
-    const values = cols.map((c) => {
-      switch (c) {
-        case "id":
-          return LIVE_SESSION_ID;
-        case "started_at":
-          return (row.started_at as number) - 1;
-        case "ended_at":
-          return null;
-        case "laps_completed":
-          return LIVE_LAPS_AT_START;
-        default:
-          return row[c] as never;
-      }
-    });
-    db.prepare(`INSERT INTO sessions (${cols.join(", ")}) VALUES (${cols.map(() => "?").join(", ")})`).run(
-      ...(values as never[]),
-    );
-    const laps = db.prepare("SELECT * FROM laps WHERE session_id = ? AND lap <= ? ORDER BY lap");
-    for (const lap of laps.all(source, LIVE_LAPS_AT_START) as Record<string, unknown>[]) {
-      copyLap(db, data, source, lap);
-    }
-  } finally {
-    db.close();
+export const MANIFEST = JSON.parse(readFileSync(new URL("store.json", STORE_DIR), "utf8")) as StoreManifest;
+
+/** Each source's session id. */
+export const SESSION = (src: string): string => {
+  const id = MANIFEST.sessions[src];
+  if (!id) {
+    throw new Error(`store.json has no session for ${src}`);
   }
-}
+  return id;
+};
 
-function copyLap(db: DatabaseSync, data: string, source: string, lap: Record<string, unknown>): void {
-  const dir = join(data, "sessions", LIVE_SESSION_ID);
-  mkdirSync(dir, { recursive: true });
-  copyFileSync(join(data, "sessions", source, lap.file as string), join(dir, lap.file as string));
-  const cols = Object.keys(lap);
-  db.prepare(`INSERT OR REPLACE INTO laps (${cols.join(", ")}) VALUES (${cols.map(() => "?").join(", ")})`).run(
-    ...(cols.map((c) => (c === "session_id" ? LIVE_SESSION_ID : lap[c])) as never[]),
-  );
-}
+/** The pit walls' stores, by the sources each shows (TWR_PITWALL_SRC), as v1's
+ * global setup made them: the main store (the joined race, the time trial, the
+ * race, the pit stop and the open session); the time trial and a session with no
+ * full lap; lap compare's (the race, the pit stop and the no-stop race); and an
+ * empty one, a source with no sessions. */
+export const STORES = {
+  main: ["replay-e2e-joined", "replay-e2e-fuji", "replay-e2e-gilles", "replay-e2e-pit-stop", "replay-e2e-live"],
+  short: ["replay-e2e-fuji", "replay-e2e-zero-lap"],
+  compare: ["replay-e2e-gilles", "replay-e2e-pit-stop", "replay-e2e-no-stop"],
+  empty: ["replay-e2e-none"],
+} as const;
 
-/** Commits lap `n` of `source` to the live session, as the engineer does when a
- * lap closes. */
-export function addLap(data: string, source: string, n: number): void {
-  const db = index(data);
-  try {
-    const lap = db.prepare("SELECT * FROM laps WHERE session_id = ? AND lap = ?").get(source, n) as
-      | Record<string, unknown>
-      | undefined;
-    if (!lap) {
-      throw new Error(`session ${source} has no lap ${n}`);
-    }
-    db.exec("BEGIN");
-    copyLap(db, data, source, lap);
-    db.prepare("UPDATE sessions SET laps_completed = ? WHERE id = ?").run(n, LIVE_SESSION_ID);
-    db.exec("COMMIT");
-  } finally {
-    db.close();
-  }
+/** The open session's id. */
+export const LIVE_SESSION_ID = SESSION("replay-e2e-live");
+
+/** Laps the open session starts with; addLap adds the next. */
+export const LIVE_LAPS_AT_START = MANIFEST.live_laps_at_start;
+
+/** Commits the open session's next lap, as ecu publishes it when the lap closes. */
+export async function addLap(): Promise<void> {
+  await publishCaptured(readCaptured(new URL("live-lap.jsonl.gz", STORE_DIR)));
 }

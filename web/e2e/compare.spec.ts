@@ -7,7 +7,18 @@ import type { Locator, Page } from "@playwright/test";
 import { gear, lapTime, pedalPct, traceTime, whole } from "../src/lib/format";
 import { expectAccessible } from "./a11y";
 import { MISSING_LAP } from "./global-setup";
-import { apiSessions, expect, expectNoHorizontalScroll, screenshot, storeUrl, test } from "./pitwall";
+import { lapJson } from "../src/api/testing";
+import {
+  apiLaps,
+  apiSessions,
+  apiTrace,
+  calls,
+  expect,
+  expectNoHorizontalScroll,
+  screenshot,
+  storeUrl,
+  test,
+} from "./pitwall";
 
 // Every page and API call here goes to the compare store's pit wall.
 test.use({
@@ -49,15 +60,11 @@ function missingLapSession(): string {
 }
 
 async function laps(page: Page, id: string): Promise<LapRow[]> {
-  const resp = await page.request.get(`/api/v1/sessions/${id}/laps`);
-  expect(resp.ok()).toBe(true);
-  return (await resp.json()).laps;
+  return apiLaps(page, id);
 }
 
 async function trace(page: Page, id: string, lap: number, points: number): Promise<Trace> {
-  const resp = await page.request.get(`/api/v1/sessions/${id}/laps/${lap}/trace?points=${points}`);
-  expect(resp.ok()).toBe(true);
-  return resp.json();
+  return apiTrace(page, id, lap, points);
 }
 
 const charts = (page: Page): Locator => page.locator("[data-slot=charts]");
@@ -282,8 +289,8 @@ test("one lap in the session: lap B is lap A, and its picker asks for another (R
   const id = await sessionId(page, RACE);
   const rows = await laps(page, id);
   // The race, as if it had only its best lap.
-  await page.route(`**/api/v1/sessions/${id}/laps`, (route) =>
-    route.fulfill({ json: { session_id: id, laps: rows.filter((l) => l.best) } }),
+  await page.route(calls("ListLaps", id), (route) =>
+    route.fulfill({ json: { sessionId: id, laps: rows.filter((l) => l.best).map(lapJson) } }),
   );
   const best = rows.find((l) => l.best)!.lap;
   await page.goto(`/sessions/${id}/compare`);

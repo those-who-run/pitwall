@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/those-who-run/pitwall/compare/v0.1.1...v0.1.2) (2026-11-01)
+
+
+### Features
+
+* delete and restore sessions from the pit wall ([#24](https://github.com/those-who-run/pitwall/issues/24)) ([c064a12](https://github.com/those-who-run/pitwall/commit/c064a12c3157be9a86ae280ec266cde4ed860c5b))
+
 ## [0.1.1](https://github.com/those-who-run/pitwall/compare/v0.1.0...v0.1.1) (2026-11-01)
 
 

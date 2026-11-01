@@ -1,7 +1,7 @@
 // A view that failed to load: what failed and what to do, the detail behind a
 // disclosure, and Retry (ADR 0004 point 9). It sits where the view would be, so the
 // shell keeps working around it. "Couldn't read the session store." / "Retry, or
-// check the engineer's logs."
+// check the pit wall's logs."
 import { CircleAlertIcon, RotateCwIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 
 export function ErrorState({
   title,
-  hint = "Retry, or check the engineer's logs.",
+  hint = "Retry, or check the pit wall's logs.",
   detail,
   onRetry,
   actionLabel = "Retry",

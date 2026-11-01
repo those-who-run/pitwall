@@ -20,7 +20,7 @@ export function failure(error: Error, what: "delete" | "restore"): string {
   if (error instanceof ApiError && error.status === 404) {
     return "The pit wall has no such session any more.";
   }
-  return `Couldn't ${what} the session: ${error.message}. Try again, or check the engineer's logs.`;
+  return `Couldn't ${what} the session: ${error.message}. Try again, or check the pit wall's logs.`;
 }
 
 /** Focuses `ref` once `on` is true: after the dialog's own focus handling,

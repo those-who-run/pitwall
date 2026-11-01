@@ -556,6 +556,8 @@ describe("delete and restore", () => {
     renderAt("/sessions/20261018-191204");
     const note = await screen.findByRole("region", { name: "Deleted" });
     await user.click(within(note).getByRole("button", { name: "Restore" }));
-    expect((await within(note).findByRole("alert")).textContent).toContain("Couldn't restore the session");
+    const alert = (await within(note).findByRole("alert")).textContent;
+    expect(alert).toContain("Couldn't restore the session");
+    expect(alert).toContain("check the pit wall's logs");
   });
 });

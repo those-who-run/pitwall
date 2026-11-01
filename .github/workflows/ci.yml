@@ -80,6 +80,9 @@ jobs:
   # (those-who-run/.github's scripts/repos.json).
   e2e:
     runs-on: ubuntu-latest
+    # The run takes about 8 min; a hung step (an apt mirror under the browser's
+    # install once held one for GitHub's 6 h) fails it instead.
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
@@ -100,6 +103,7 @@ jobs:
       # Chromium and the libraries it needs, at the version package-lock.json pins.
       - name: Install Chromium
         working-directory: web
+        timeout-minutes: 10
         run: npx playwright install --with-deps chromium
       - name: make web-e2e
         run: make web-e2e

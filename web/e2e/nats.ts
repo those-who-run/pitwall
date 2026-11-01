@@ -26,7 +26,12 @@ export function nats(url = process.env.E2E_NATS_URL): Promise<NatsConnection> {
   if (!url) {
     throw new Error("E2E_NATS_URL is not set: run through playwright.config.ts's global setup");
   }
-  conn ??= connect({ servers: url, name: "pitwall-e2e" });
+  // A connection that failed is forgotten, so the set-up's wait for NATS to
+  // start tries again rather than getting the same failure each time.
+  conn ??= connect({ servers: url, name: "pitwall-e2e" }).catch((err: unknown) => {
+    conn = null;
+    throw err;
+  });
   return conn;
 }
 

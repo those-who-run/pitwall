@@ -35,6 +35,7 @@ help:
 	@echo "hooks     - install the commit hooks; a new clone or worktree runs it once"
 	@echo "fmt-check, tidy, vet, go-test, build, vuln - the Go checks one at a time"
 	@echo "links     - every internal link and anchor in the Markdown resolves (offline)"
+	@echo "go-scripts - the Go programs run by hand (web/e2e/store/make.go): gofmt and go vet"
 	@echo "guard     - .claude/ holds those-who-run/.github's guard and settings at the pinned commit"
 	@echo "web-check - the web app: ESLint, tsc, the API client's freshness, Vitest, the build, the bundle budget (CI's web job)"
 	@echo "web-build - build the web app into web/dist"
@@ -53,10 +54,11 @@ check: prereqs
 .PHONY: test
 test: go-test test-repo
 
-# The repository's own checks apart from the Go tests: links, the guard copy, and
+# The repository's own checks apart from the Go tests: links, the guard copy, the
+# Go programs run by hand, and
 # the tests in tests/.
 .PHONY: test-repo
-test-repo: links guard
+test-repo: links guard go-scripts
 	$(PY) -m unittest discover -s tests
 
 # Go at go.mod's toolchain version (or a GOTOOLCHAIN that fetches it), gofmt, cgo's
@@ -113,6 +115,18 @@ build:
 .PHONY: vuln
 vuln:
 	$(GO_TOOL) $(GOVULNCHECK) $(GO_PKGS)
+
+# The Go programs run by hand, outside the module's packages (`//go:build ignore`,
+# under web/, which the Go checks leave out): web/e2e/store/make.go. Formatted,
+# and vetted, which compiles them, so one that has rotted fails here (CI's test
+# job) rather than when someone next runs it.
+GO_SCRIPTS := web/e2e/store/make.go
+
+.PHONY: go-scripts
+go-scripts:
+	@unformatted=$$(gofmt -l $(GO_SCRIPTS)) || exit 1; \
+	if [ -n "$$unformatted" ]; then echo "not formatted (gofmt -w):" $$unformatted >&2; exit 1; fi
+	@for f in $(GO_SCRIPTS); do go vet "$$f" || exit 1; done
 
 .PHONY: links
 links:

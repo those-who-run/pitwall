@@ -1,14 +1,27 @@
-# The service's image: built in Go's image, run from distroless's static image as
-# its non-root user. image.yml builds and smoke-tests it on every PR; a release
-# builds it again and image-publish.yml pushes that build. Both base images are
-# pinned by the digest of their multi-platform index (the tag beside it is for
-# people); Renovate bumps the tag and the digest together.
+# The pit wall's image (those-who-run/paddock#131): the web app built in Node's
+# image, the server built in Go's, and both run from distroless's static image as
+# its non-root user, with no Node, no Python and no shell at runtime. image.yml
+# builds and smoke-tests it on every PR; a release builds it again and
+# image-publish.yml pushes that build. The base images are pinned by the digest of
+# their multi-platform index (the tag beside it is for people); Renovate bumps the
+# tag and the digest together, and Node's with web/.node-version
+# (tests/test_dockerfile.py keeps the two equal).
 #
 # A static binary (CGO_ENABLED=0) needs no C library, so the runtime image has
 # none. A component that needs cgo (logbook, for DuckDB: paddock ADR 0007) sets
 # CGO_ENABLED=1 in the build stage and runs from
 # gcr.io/distroless/cc-debian13:nonroot instead, which carries glibc; its go.yml
 # caller passes `cgo: true`.
+
+# The web app, as `make web-build` builds it: web/package-lock.json's packages,
+# with no install scripts (web/.npmrc), then tsc and Vite into /web/dist.
+FROM docker.io/library/node:26.12.0-trixie-slim@sha256:e556a144463cc8dc53afe8de6d2fa0db5c132fd39ffa232c17641bd40df2bf11 AS web
+WORKDIR /web
+# The packages first, so a change to the app alone reuses this layer.
+COPY web/package.json web/package-lock.json web/.npmrc ./
+RUN npm ci --no-audit --no-fund
+COPY web/ ./
+RUN npm run build
 
 FROM docker.io/library/golang:1.27.3-trixie@sha256:fbb7ae40b62ff8afe31662df570d39b4f5052ac32b90dae8e60d7657a20a74f4 AS build
 WORKDIR /src
@@ -27,6 +40,10 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION}"
 
 FROM gcr.io/distroless/static-debian13:nonroot@sha256:18f4cc26c9ffa7f20a359298be7deadac5c607c8e03a02b8119f1a5fc2f82c99
 COPY --from=build /out/service /service
+# The built web app, served on every path the API doesn't take; a deployment may
+# point TWR_PITWALL_STATIC_DIR elsewhere, but needn't.
+COPY --from=web /web/dist /web
+ENV TWR_PITWALL_STATIC_DIR=/web
 # distroless's nonroot user (65532), by number so a runtime can check it isn't root.
 USER 65532:65532
 EXPOSE 8080

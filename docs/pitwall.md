@@ -2,7 +2,7 @@
 
 For the driver and anyone running the pit wall: the web app as a driver uses it, the data API behind it, the store it reads, the preview on a phone or iPad, and the pitwall image. Back to v1's [docs index](https://github.com/those-who-run/those-who-run/blob/v1.0.0/docs/README.md).
 
-This page came over from v1 with the web app (those-who-run/paddock#120). "Running it" and "The data API" describe v2's server (those-who-run/paddock#124); the rest still describes v1 until those-who-run/paddock#127 and those-who-run/paddock#131 bring v2's.
+This page came over from v1 with the web app (those-who-run/paddock#120). "Running it", "The data API" and "The pitwall image" describe v2's server (those-who-run/paddock#124, those-who-run/paddock#131); the rest still describes v1 until those-who-run/paddock#127 brings v2's.
 
 ## Pages
 
@@ -81,7 +81,7 @@ component's):
 | `ADDR` | `:8080` | Where it listens; compose publishes it on 9852, as v1's port. |
 | `LOG_LEVEL` | `info` | `debug` adds an access log line per request: method, path, status and time, never a header or the query. |
 | `TWR_NATS_URL` | `nats://127.0.0.1:4222` | The NATS server `logbook` and the `live` bucket are on. NATS down at the start doesn't stop the pit wall: it keeps trying, and serves the web app meanwhile. |
-| `TWR_PITWALL_STATIC_DIR` | unset | The built web app. Unset serves the API and `/healthz` only. |
+| `TWR_PITWALL_STATIC_DIR` | unset; `/web` in the image | The built web app. Unset serves the API and `/healthz` only. |
 | `TWR_PITWALL_SRC` | `live,v1-import` | The sources whose sessions it shows, comma separated, in order of preference: v2's own and v1's imported history (decision D7). A list naming no source is an error, never "every source". |
 | `TWR_PITWALL_STALE` | `15s` | How old `ecu`'s live status may be before the chip says "Engineer offline". |
 
@@ -189,10 +189,27 @@ The pit wall only reads and never takes the lock.
 
 ## The pitwall image
 
-`docker build --target pitwall` (`make build-pitwall`) is the pit wall alone:
-the core install and `web/dist` at `/app/web`, with `GT7_PITWALL_STATIC=/app/web`
-and `CMD ["pitwall"]` on port 9852. It has no Discord, Piper, gt-telem,
-prometheus-client, audio libraries, voice or Node (about 210 MB). Each
-release pushes it as `muldoon/those-who-run:<version>-pitwall`, next to the
-engineer's tag. The default target is the engineer's image (about 940 MB), which
-has no pit wall in it.
+`ghcr.io/those-who-run/twr-pitwall:X.Y.Z` is the pit wall's image
+(those-who-run/paddock#131; images on ghcr, paddock ADR 0006). The
+`Dockerfile` builds the web app in Node's image (the version in
+`web/.node-version`, with `npm ci` and `npm run build`), the server in Go's
+(`CGO_ENABLED=0`, its version built in with `-ldflags` from the release tag),
+and runs both from distroless's static image as its non-root user (65532):
+the binary at `/service` and `web/dist` at `/web`, with
+`TWR_PITWALL_STATIC_DIR=/web` set, on port 8080. It has no Node, no Python
+and no shell. A deployment probes `GET /healthz`, which is 503 when `/web`'s
+`index.html` can't be read.
+
+Every PR builds it and runs `scripts/image_smoke.sh` on it, pushing nothing:
+the version, the non-root user, under 40 MB, no Node or Python, `/healthz`
+answering 200 with the version within 10 s, `index.html` on `/`, on a
+session's page and on v1's card link `/?session=<id>`, and `GetEngineStatus`
+answering offline over Connect's GET. A
+release tag `vX.Y.Z` builds it again, runs the same smoke test expecting
+`X.Y.Z`, and `image-publish.yml` in `those-who-run/.github` pushes that build
+with its SBOM and provenance, attested. Check an image with:
+
+```sh
+gh attestation verify oci://ghcr.io/those-who-run/twr-pitwall:X.Y.Z -R those-who-run/pitwall \
+  --signer-workflow those-who-run/.github/.github/workflows/image-publish.yml
+```

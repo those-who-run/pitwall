@@ -22,10 +22,12 @@ test("a second visit to a session page within 5 s gets 304s for its data calls (
   // has the pit wall's own status line, the 304 DevTools shows.
   //
   // The two events come down different pipes (requestWillBeSent from the page's
-  // renderer, responseReceivedExtraInfo from the network service), so Chromium
-  // does not order them: on a busy runner a 304 from localhost can report its
-  // status before the page has said what it asked for. Each is kept by request id
-  // and the two are joined when the test reads them, in whatever order they came.
+  // renderer, responseReceivedExtraInfo from the network service), and Chromium
+  // does not order them. The most likely cause of this test's flakes was a 304
+  // from localhost reporting its status before the page had said what it asked
+  // for, which the test dropped. Each is now kept by request id and the two are
+  // joined when the test reads them, in whatever order they came. A call whose
+  // extra info never comes fails as an empty list, [], not undefined.
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("Network.enable");
   const methods = new Map<string, string>();

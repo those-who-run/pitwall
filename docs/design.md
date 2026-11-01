@@ -1,13 +1,14 @@
 # Design guide
 
-This guide came over from v1 with the web app (those-who-run/paddock#120); a bare `#N` in it is v1's, those-who-run/those-who-run#N.
+This guide came over from v1 with the web app (those-who-run/paddock#120); a bare `#N` in it is v1's, those-who-run/those-who-run#N, and so is an ADR named here: v1's records, which paddock's [v1 records](https://github.com/those-who-run/paddock/blob/main/docs/adr/README.md#v1s-records) keep in force for v2.
 
 The working reference for the web app: the pit wall and the dashboards. The
-rules are in [ADR 0004](https://github.com/those-who-run/those-who-run/blob/v1.0.0/docs/adr/0004-design-language.md). This page holds the
+rules are in v1's [ADR 0004](https://github.com/those-who-run/those-who-run/blob/v1.0.0/docs/adr/0004-design-language.md), which holds for `pitwall` and `dash` as written. This page holds the
 values, and a normal PR may change them. When the code and this page disagree,
 fix one of them in the same PR.
 
-The look is the brand's, from `brand.css`: **a 90s Japanese track-day shop.
+The look is the brand's, from `web/src/styles/brand.css`, edited by hand
+(those-who-run/paddock#129): **a 90s Japanese track-day shop.
 Advan red on black, carbon grey panels, white type.** It is technical, quiet
 and dense with numbers. Red is used sparingly, like a livery stripe, not as
 paint.
@@ -193,7 +194,8 @@ Rules:
   (`fuelPct(v, { fuelUse: false })`).
 - `position` returns two parts, `{ position: "P3", of: "/16" }`, so the field
   can be muted. Whether to show it is the API's `position_shown`.
-- Fuel percentages round half to even, as Python's `round()` does on the card.
+- Fuel percentages round half to even, as contracts' Go `format` package does
+  for the results card (those-who-run/paddock#128).
 - Fuel is a share of the tank (`100 × amount / fuel_capacity`) when the session
   has a `fuel_capacity`. GT7 sends a level and a capacity, never litres: in all
   25 recordings in `tests/fixtures/` (16 cars) the capacity is 100 while
@@ -208,10 +210,10 @@ Rules:
 
 The kit is in `web/src/components/`, shown at `/_kit` (#295,
 `web/src/routes/kit.tsx`): open it on the pit wall, or on the phone and iPad
-(v1's `make web-preview` comes back with v2's server). Use it before writing anything new. A new pattern goes into the
+([the pit wall guide](pitwall.md#on-the-phone-and-ipad)). Use it before writing anything new. A new pattern goes into the
 kit first, with all its states, and `/_kit` shows it. `/_kit` is in every build
 but linked from nowhere. Its sample data is `web/src/kit/samples.ts`, typed as
-the API's generated types, with real names from the engineer's store. CI screenshots
+the API's generated types, with real names from v1's store. CI screenshots
 it at the three widths and runs axe over it (`web/e2e/kit.spec.ts`).
 
 | Component | File | States |
@@ -246,8 +248,9 @@ How they are built:
   an icon button's accessible name.
 - **SessionCard** works from `Session`'s values. It writes "Finished P1/16 in
   9:56.826" and a live "Lap 5 of 12, running P3/16" itself, and takes the
-  ending Python words (retired, paused, stopped, "no full lap") from
-  `Session.result`, in sentence case (ADR 0004 point 6). The whole card is its
+  ending words (retired, paused, stopped, "no full lap") from
+  `Session.result`, which the API takes from contracts' `format.Result`, as
+  `podium`'s card does (those-who-run/paddock#128), in sentence case (ADR 0004 point 6). The whole card is its
   title's link, through a stretched `::after`; an `Unknown` button sits above
   it. The title wraps to two lines and then ends in an ellipsis, with the full
   name in its `title` and accessible name. Hovered, it gains a
@@ -421,8 +424,9 @@ The frame every page sits in (#296), in `web/src/app/`:
   "Paused · <track>" with the hollow dot, "Replay", "Demo", "Idle" or "In the
   menus", and "Engineer offline" in `--text-muted`, never an error colour. The
   track is named only when the detector is sure; otherwise "Unknown track",
-  muted. A version mismatch adds a small `--info` dot, and the popover says
-  "Engineer 0.7.0, pit wall 0.7.1: a deploy is rolling out". The popover is
+  muted. The popover names the engineer's version and the pit wall's; in v2
+  they are released apart, so a difference shows no marker
+  (those-who-run/paddock#125 R7). The popover is
   `--surface-raised`, so nothing in it is red. `/_kit` shows every state.
 - **Navigation** (`nav.tsx`, `sections.ts`): nothing until there are two
   sections. Then a bottom tab bar (64 px with its top border, plus the home
@@ -503,5 +507,5 @@ compare. It is designed for a phone in portrait first.
   "out lap", as the engineer says them.
 - No exclamation marks, and no "Oops".
 - Errors say what happened, then what to do: "Couldn't read the session store.
-  Retry, or check the engineer's logs."
+  Retry, or check the pit wall's logs."
 - Empty states say why, and the next step.

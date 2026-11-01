@@ -10,6 +10,9 @@ its git history from `those-who-run/those-who-run` (those-who-run/paddock#120),
 so issue numbers in its older commits are `those-who-run/those-who-run#N`. The
 Go API (`cmd/pitwall/`, `internal/`) starts from the `chassis` skeleton.
 
+[`docs/pitwall.md`](docs/pitwall.md) is the guide: the pages, running it, the
+API and the image. [`docs/design.md`](docs/design.md) holds the design values.
+
 Issues are off in this repository. Every issue, the roadmap and the decisions
 (ADRs) live in [those-who-run/paddock](https://github.com/those-who-run/paddock). A pull request here
 names its paddock issue: `Closes those-who-run/paddock#N.` when it meets every

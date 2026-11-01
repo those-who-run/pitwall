@@ -1,8 +1,9 @@
 # The web app: rules for agents and contributors
 
 The pit wall's web app: a React single-page app built to static files and
-served, with its data API, by the pit wall
-([ADR 0003](https://github.com/those-who-run/those-who-run/blob/v1.0.0/docs/adr/0003-ui-stack.md), from v1). It came over from
+served, with its data API, by the pit wall's Go server on one origin (v1's
+[ADR 0003](https://github.com/those-who-run/those-who-run/blob/v1.0.0/docs/adr/0003-ui-stack.md),
+kept by paddock's [v1 records](https://github.com/those-who-run/paddock/blob/main/docs/adr/README.md#v1s-records)). It came over from
 `those-who-run/those-who-run` with its history (those-who-run/paddock#120).
 The rules for the whole repository are in [`../AGENTS.md`](../AGENTS.md) and,
 through it, paddock's `AGENTS.md`; this file adds only what is specific to
@@ -58,8 +59,9 @@ not in your checkout, follow the rule anyway.
 - Playwright (`e2e/`, the browser check) is `make web-e2e` at the root, CI's
   `e2e` job (those-who-run/paddock#130). It needs Go, Docker (or
   `E2E_CONTAINER=podman`) and Chromium (`npx playwright install chromium`).
-- `make web-dev` serves the app on http://localhost:5173 with the API proxied
-  to a local pit wall.
+- `make web-dev` serves the app on http://localhost:5173 with the API and
+  `/healthz` proxied to a running pit wall, `PITWALL_URL`
+  ([`README.md`](README.md) says which).
 
 ## Layout of `src/`
 
@@ -77,7 +79,7 @@ not in your checkout, follow the rule anyway.
 
 ## Two rules that keep server rendering possible
 
-From ADR 0003 point 3, both enforced:
+From v1's ADR 0003 point 3, both enforced:
 
 - **All data goes through the generated client and its hooks.** Components
   never call `fetch` or the client themselves; ESLint allows it only under
@@ -86,23 +88,37 @@ From ADR 0003 point 3, both enforced:
   `localStorage`, `navigator` or canvas outside a function or effect.
   `src/routes/ssr-safe.test.ts` imports every route module under Node.
 
-## The API contract
+## The contract
 
-The API is `twr.pitwall.v1.PitwallService` in `contracts`
-(those-who-run/paddock#127). `buf.gen.yaml` pins the `contracts` tag, and `npm
-run api` (`scripts/contracts.ts`) writes `src/api/gen/` from it: protobuf-es
-v2's messages, service and JSON types, `format-cases.json` and contracts'
-examples of the API's answers (`examples/`, which `adapt.test.ts` reads) from
-the same tag. The tag must be the contracts version `../go.mod` requires;
-Renovate bumps both in one PR, and the check fails while they differ.
-`src/api/client.ts` speaks Connect's GET over `fetch` for the reads, and POST
-with a JSON body for the two writes (`DeleteSession`, `RestoreSession`, ADR
-0014 in paddock), its methods typed by the
-generated service and JSON types, with only types imported, so no protobuf
-runtime is bundled (the maintainer's decision, 2026-10-31). Never edit `src/api/gen/` by hand: bump
-the tag (Renovate does) and run `npm run api`; `make web-check` fails while it
-is stale. The pages read the shapes in `src/api/adapt.ts`, v1's snake_case
-fields, which the hooks map the generated messages to.
+The API is `twr.pitwall.v1.PitwallService`, defined in protobuf in
+`contracts`, under `proto/twr/pitwall/v1/` (those-who-run/paddock#127; paddock's
+ADR 0002 and 0008 say how contracts are written, released and tagged). The
+pit wall never defines the API itself: a new method or field is a change to
+`contracts`, released with a tag `vX.Y.Z`, then taken here.
+
+- **What is generated.** `npm run api` (`scripts/contracts.ts`, run in `web/`)
+  writes `src/api/gen/` from the tag `buf.gen.yaml` pins: protobuf-es v2's
+  messages, service and JSON types for `twr.pitwall.v1`, contracts'
+  `format/format-cases.json`, and contracts' examples of the API's answers
+  (`examples/`, which `adapt.test.ts` reads), all from that one tag. It is
+  committed, and never edited by hand.
+- **Bumping it.** The tag in `buf.gen.yaml` must be the contracts version
+  `../go.mod` requires, so the page and the server read the same API.
+  Renovate bumps both in one PR (the `contracts` group in `renovate.json`).
+  By hand: change the tag in `buf.gen.yaml`, run
+  `go get github.com/those-who-run/contracts@vX.Y.Z` and `go mod tidy` at the
+  root, then regenerate: `npm run api` refuses while the two versions differ.
+- **Regenerating.** `npm run api` in `web/`, which needs the network, and
+  commit `src/api/gen/`. `npm run api:check`, in `make web-check`, fails while
+  the two versions differ or `src/api/gen/` is not what the tag gives, so a
+  Renovate bump stays red until someone runs it.
+- **Calling it.** `src/api/client.ts` speaks Connect's GET over `fetch` for the
+  reads, and POST with a JSON body for the two writes (`DeleteSession`,
+  `RestoreSession`, ADR 0014 in paddock), its methods typed by the generated
+  service and JSON types, with only types imported, so no protobuf runtime is
+  bundled (the maintainer's decision, 2026-10-31). The pages read the shapes in
+  `src/api/adapt.ts`, v1's snake_case fields, which the hooks map the
+  generated messages to.
 
 ## Design language
 
@@ -120,7 +136,7 @@ fields, which the hooks map the generated messages to.
   (`src/api/gen/format-cases.json`), checked by Vitest. The page
   never shows `null`, `NaN`, `undefined` or a bare 0 for unknown.
 - **Five designed states** for every data view: loading, empty, error, unknown
-  and live (ADR 0004 point 9).
+  and live (v1's ADR 0004 point 9).
 
 ## Tests
 

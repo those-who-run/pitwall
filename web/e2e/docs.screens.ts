@@ -50,11 +50,11 @@ async function shoot(
     const height = await page.evaluate(() => document.documentElement.scrollHeight);
     await page.setViewportSize({ width, height });
   }
-  // No transition or animation left to run: the pointer leaving the chip would
-  // otherwise fade its hover out during the shot, and differ from run to run.
-  await page.addStyleTag({
-    content: "*, *::before, *::after { transition: none !important; animation: none !important; }",
-  });
+  // No transition left to run: the pointer leaving the chip would otherwise fade
+  // its hover out during the shot, and differ from run to run. Animations stay:
+  // the skeletons fade in with one, and the shot's `animations: "disabled"`
+  // finishes them, where `animation: none` would leave them unseen.
+  await page.addStyleTag({ content: "*, *::before, *::after { transition: none !important; }" });
   await page.mouse.move(0, 0);
   const dir = join(SCREENS, testInfo.project.name);
   mkdirSync(dir, { recursive: true });

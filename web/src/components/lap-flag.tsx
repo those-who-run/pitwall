@@ -12,7 +12,7 @@ const FLAGS: Record<LapFlagKind, { label: string; title: string; text: string }>
   pit: {
     label: "Pit",
     title: "Pit lap",
-    text: "The car came into the pits on this lap, for fuel, tyres or both, as the engineer's pit-stop detector saw it.",
+    text: "The car came into the pits on this lap, as the engineer's pit-stop detector saw it.",
   },
   out: {
     label: "Out",

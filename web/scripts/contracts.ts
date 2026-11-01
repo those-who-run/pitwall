@@ -93,11 +93,16 @@ async function generate(out: string): Promise<void> {
   if (buf.status !== 0) {
     throw new Error(`buf generate failed (${buf.status ?? buf.signal})`);
   }
-  const tag = pinnedTag(readFileSync("buf.gen.yaml", "utf8"));
-  const dir = join(out, GEN);
+  await takeFiles(pinnedTag(readFileSync("buf.gen.yaml", "utf8")), join(out, GEN));
+}
+
+/** Writes into `dir` the files `buf generate` doesn't, from contracts at `tag`:
+ * format/format-cases.json as format-cases.json, and the API's examples under
+ * examples/. `get` is fetch, which the tests replace. */
+export async function takeFiles(tag: string, dir: string, get: typeof fetch = fetch): Promise<void> {
   const take = async (path: string, to: string) => {
     const url = `https://raw.githubusercontent.com/${REPO}/${tag}/${path}`;
-    const resp = await fetch(url);
+    const resp = await get(url);
     if (!resp.ok) {
       throw new Error(`GET ${url}: ${resp.status}`);
     }

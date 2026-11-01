@@ -29,13 +29,16 @@ link lands on `/sessions/<id>`.
 - **Each route is a lazy chunk**, under a gzipped budget in
   `web/bundle-budget.json` (the entry, and each route at most 60 KB). `node
   scripts/bundle-budget.ts --set` in `web/` resets it to the build plus 10%.
-- **Playwright** (off until those-who-run/paddock#130) runs the built app against the real `pitwall` over a store
-  replayed from fixtures, in Chromium at 390×844, 820×1180 and 1440×900. It
-  checks nothing scrolls sideways and saves screenshots to
-  `web/test-results/screenshots/`, which CI uploads. The helpers in `web/e2e/`
-  (the server, the viewports, the screenshot) are shared by every page's spec.
-  Behind the pit wall is a stub engineer (`web/e2e/engineer.ts`), down unless a
-  test asks for a state with `setEngineer(page, "driving")`.
+- **Playwright** (`make web-e2e`, CI's `e2e` job; those-who-run/paddock#130)
+  runs the built app against the real `pitwall` over NATS and the pinned
+  `logbook` image, which serves `web/e2e/store/data`: v1's recordings replayed
+  through `ecu` by `web/e2e/store/make.go`, so no `ecu` runs in CI. It runs in
+  Chromium at 390×844, 820×1180 and 1440×900, one test at a time, checks nothing
+  scrolls sideways and saves screenshots to `web/test-results/screenshots/`,
+  which CI uploads. The helpers in `web/e2e/` (the set-up, the API, the
+  viewports, the screenshot) are shared by every page's spec. The engineer is
+  the live KV bucket (`web/e2e/engineer.ts`): down unless a test asks for a
+  state with `setEngineer(page, "driving")`.
 
 Node (26 LTS) is pinned in `web/.node-version` and `engines`, every package
 exactly in `web/package-lock.json`, installed with `npm ci`. Add or change a

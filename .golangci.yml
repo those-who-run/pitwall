@@ -36,6 +36,10 @@ linters:
   # `//nolint:<linter> // <why>` comment a reviewer can see.
   exclusions:
     presets: []
+    # npm's packages, once `make web-deps` has put them in web/node_modules: one
+    # (flatted) ships a Go package of its own, which isn't ours to lint.
+    paths:
+      - web/node_modules
 
 issues:
   # Every finding, not the first few per linter.

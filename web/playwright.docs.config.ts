@@ -2,6 +2,10 @@ import { defineConfig } from "@playwright/test";
 
 import { VIEWPORTS } from "./e2e/viewports";
 
+// Not brought over to v2 yet: those-who-run/paddock#130 was trimmed to leave the
+// docs' screenshots out (the Rosberg plan, 2026-10-31), and the global setup no
+// longer reads E2E_REPLAY_CLOCK or E2E_NO_LIVE_SESSION.
+//
 // The docs' screenshots (#336): `make docs-screenshots` runs this, never
 // `make web-check`. The same global setup as the e2e suite (the built app on the
 // real pit wall over the replayed fixtures, with the stub engineer), but the store

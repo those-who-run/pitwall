@@ -14,6 +14,17 @@
         "git_repo: https://github\\.com/(?<depName>those-who-run/contracts)\\.git\\s+tag: (?<currentValue>v\\d+\\.\\d+\\.\\d+)"
       ],
       "datasourceTemplate": "github-tags"
+    },
+    {
+      "description": "The images the end-to-end set-up runs, pinned by tag and digest (web/e2e/global-setup.ts; those-who-run/paddock#130 R5): NATS and logbook. A bump PR runs the e2e job against them. The store in web/e2e/store was made with the logbook web/e2e/store/make.go names; a newer logbook migrates it as it opens it.",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^web/e2e/global-setup\\.ts$/"
+      ],
+      "matchStrings": [
+        "\"(?<depName>(?:docker\\.io|ghcr\\.io)/[^\":@]+):(?<currentValue>[^\"@]+)@(?<currentDigest>sha256:[0-9a-f]{64})\""
+      ],
+      "datasourceTemplate": "docker"
     }
   ],
   "packageRules": [

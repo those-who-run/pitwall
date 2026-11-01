@@ -1,0 +1,81 @@
+{
+  "about": "The end-to-end tests' logbook store, made by web/e2e/store/make.go: read it there.",
+  "ecu": "v0.1.15",
+  "logbook": "ghcr.io/those-who-run/twr-logbook:0.1.7@sha256:b4fe71257ed0a122cb6942072c1dcff8192c2ae0fd345b4a13b8ff852d85ffd0",
+  "replays": [
+    {
+      "src": "replay-e2e-joined",
+      "recording": "real-nuc-suzuka-joined-mid-race-2026-10-18.jsonl.gz",
+      "sha256": "dd7c7dd4553ddf2549e49ba32e54341f825a2b7900d90fdca0f8e25c364c52cf",
+      "clock": "2026-10-15T09:00:00Z"
+    },
+    {
+      "src": "replay-e2e-fuji",
+      "recording": "real-nuc-fuji-timed-2026-10-15.jsonl.gz",
+      "sha256": "326dc39244a449c10798608b130d95e96317822beb61d995970ca7df298c9c10",
+      "clock": "2026-10-15T10:00:00Z"
+    },
+    {
+      "src": "replay-e2e-gilles",
+      "recording": "real-nuc-gilles-villeneuve-race-2026-10-17.jsonl.gz",
+      "sha256": "ca8f5c2a95cb50a9e2b8a7717338f6fb927d64b3ac87046f1438cf44c91daa11",
+      "clock": "2026-10-15T11:00:00Z"
+    },
+    {
+      "src": "replay-e2e-live",
+      "recording": "real-nuc-suzuka-pit-stop-2026-10-15.jsonl.gz",
+      "sha256": "9684c2ee9e1da825b0870b22bfec81ecff833a3ae20e523c0efc61e8863e5bdb",
+      "clock": "2026-10-15T11:59:59Z",
+      "keep_open": true
+    },
+    {
+      "src": "replay-e2e-pit-stop",
+      "recording": "real-nuc-suzuka-pit-stop-2026-10-15.jsonl.gz",
+      "sha256": "9684c2ee9e1da825b0870b22bfec81ecff833a3ae20e523c0efc61e8863e5bdb",
+      "clock": "2026-10-15T12:00:00Z"
+    },
+    {
+      "src": "replay-e2e-zero-lap",
+      "recording": "real-nuc-gilles-villeneuve-race-2026-10-17.jsonl.gz",
+      "sha256": "ca8f5c2a95cb50a9e2b8a7717338f6fb927d64b3ac87046f1438cf44c91daa11",
+      "clock": "2026-10-15T12:30:00Z",
+      "cut_secs": 60
+    },
+    {
+      "src": "replay-e2e-no-stop",
+      "recording": "real-nuc-suzuka-no-stop-2026-10-15.jsonl.gz",
+      "sha256": "0477116644a19ab97aac4c19dbecaa4129ee691c57378562cf36c7a094c4aeaa",
+      "clock": "2026-10-15T12:45:00Z"
+    }
+  ],
+  "sessions": {
+    "replay-e2e-fuji": "01M4ZG3DR0E5APR6BYEFATW5JA",
+    "replay-e2e-gilles": "01M4ZKGNX7EJZG2025F8FKP2EE",
+    "replay-e2e-joined": "01M4ZCMBM0FP64TESS5F8N9WHM",
+    "replay-e2e-live": "01M4ZPYB6QBPKNZCDY4Z0NMA75",
+    "replay-e2e-no-stop": "01M4ZSGVHE9X1B8HG5B5HN75WX",
+    "replay-e2e-pit-stop": "01M4ZPYC5ZZCKJR3BVCJN8EVSH",
+    "replay-e2e-zero-lap": "01M4ZRNFB7B74PD3AN3HQVBWPM"
+  },
+  "live_laps_at_start": 4,
+  "events_seq": 118,
+  "frames_seq": 3945,
+  "ecu_at_the_end": {
+    "src": "replay-e2e-no-stop",
+    "status": {
+      "source": "replay-e2e-no-stop",
+      "runId": "01M4ZSGB70CX6APTY3C9AHFV5G",
+      "version": "dev",
+      "startedAt": "2026-10-31T23:35:27.141855028Z",
+      "activity": "ACTIVITY_IDLE",
+      "idle": true,
+      "telemetryConnected": true,
+      "telemetryListening": true,
+      "lastPacketAgeSecs": 0,
+      "packets": 884,
+      "racesStarted": 1,
+      "updatedAt": "2026-10-31T23:35:27.220244603Z"
+    },
+    "session": null
+  }
+}

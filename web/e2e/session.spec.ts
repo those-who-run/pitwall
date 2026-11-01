@@ -6,7 +6,18 @@ import type { Page } from "@playwright/test";
 import { expectAccessible } from "./a11y";
 import { setEngineer } from "./engineer";
 import { lapTime } from "../src/lib/format";
-import { apiSessions, expect, expectNoHorizontalScroll, screenshot, storeUrl, test } from "./pitwall";
+import {
+  apiLaps,
+  apiSession,
+  apiSessions,
+  calls,
+  connectCall,
+  expect,
+  expectNoHorizontalScroll,
+  screenshot,
+  storeUrl,
+  test,
+} from "./pitwall";
 import { addLap, LIVE_LAPS_AT_START, LIVE_SESSION_ID } from "./store";
 
 interface LapRow {
@@ -25,8 +36,8 @@ interface LapRow {
 async function sessionTitled(page: Page, title: string) {
   const s = (await apiSessions(page)).find((x) => x.title === title && x.session_id !== LIVE_SESSION_ID);
   expect(s, `a session titled ${title}`).toBeTruthy();
-  const one = await (await page.request.get(`/api/v1/sessions/${s!.session_id}`)).json();
-  const laps = (await (await page.request.get(`/api/v1/sessions/${s!.session_id}/laps`)).json()).laps as LapRow[];
+  const one = await apiSession(page, s!.session_id);
+  const laps: LapRow[] = await apiLaps(page, s!.session_id);
   return { id: s!.session_id as string, session: one, laps };
 }
 
@@ -62,29 +73,29 @@ test("the race: the result first, then its figures (AC1)", async ({ page }, test
   const hero = page.locator("[data-slot=session-hero]");
   await expect(hero.getByRole("heading", { level: 2 })).toHaveText("Circuit Gilles Villeneuve");
   await expect(hero).toContainText("12-lap race");
-  await expect(hero).toContainText(session.car);
+  await expect(hero).toContainText(session.car!);
   // The fixture is the first 230 s of the race: it ends retired on lap 3, P15.
   const headline = hero.locator("[data-slot=headline]");
   await expect(headline).toContainText(`Position ${session.final_position} of ${session.total_cars}`);
   await expect(headline).toContainText("Retired on lap 3 of 12, running P15");
   await expect(page).toHaveTitle(`${RACE} · Pit wall`);
 
-  await expect(tile(page, "Best lap")).toContainText(clock(session.best_lap_ms));
+  await expect(tile(page, "Best lap")).toContainText(clock(session.best_lap_ms!));
   await expect(tile(page, "Best lap")).toContainText(`lap ${session.best_lap_no}`);
   const clean = laps.filter((l) => l.clean && !l.invalid).length;
   await expect(tile(page, "Average")).toContainText(clock(cleanAverage(laps)));
   await expect(tile(page, "Average")).toContainText(`of ${clean} clean laps`);
   await expect(tile(page, "Laps")).toContainText(`${session.laps_completed}of ${session.total_laps}`);
   // The tank is 100 of GT7's units: fuel is a share of it.
-  await expect(tile(page, "Fuel used")).toContainText(`${Math.round((100 * session.fuel_used) / session.fuel_capacity)}%`);
+  await expect(tile(page, "Fuel used")).toContainText(`${Math.round((100 * session.fuel_used!) / session.fuel_capacity!)}%`);
   await expect(tile(page, "Fuel used")).toContainText("per lap");
   await expect(tile(page, "Pit stops")).toContainText("0");
 
   // The partial lap is muted, with its flag; the best is purple and named.
   await expect(row(page, 3)).toHaveAttribute("data-partial", "true");
   await expect(row(page, 3).getByRole("button", { name: "Partial" })).toBeVisible();
-  await expect(row(page, session.best_lap_no)).toContainText("(best lap)");
-  await expect(row(page, session.best_lap_no)).toContainText("Best");
+  await expect(row(page, session.best_lap_no!)).toContainText("(best lap)");
+  await expect(row(page, session.best_lap_no!)).toContainText("Best");
 
   if (testInfo.project.name === "phone") {
     // R1: the answer is above the fold on a 390 × 844 phone.
@@ -100,7 +111,7 @@ test("the date, the dot and the car wrap together: no dot left at a line's end",
   const { id, session } = await sessionTitled(page, RACE);
   await page.goto(`/sessions/${id}`);
   const meta = page.locator("[data-slot=session-hero] [data-slot=when-and-car]");
-  await expect(meta).toContainText(session.car);
+  await expect(meta).toContainText(session.car!);
   // The top of the date, the dot and the car's first letter: one line, at every size.
   const tops = await meta.evaluate((el) => {
     const dot = el.querySelector("[aria-hidden=true]")!;
@@ -220,12 +231,11 @@ test("picks two laps for compare, and Back keeps them (AC4)", async ({ page }) =
 test("a live session's new lap lands without a reload, under what is read (AC5)", async ({ page }, testInfo) => {
   // It writes to the store's one open session, so it runs at one width.
   test.skip(testInfo.project.name !== "phone", "the store's open session is driven once");
-  const store = process.env.PITWALL_STORE!;
-  const source = process.env.PITWALL_LIVE_SOURCE!;
   await setEngineer(page, "live-store");
   const lapAsks: number[] = [];
   page.on("request", (r) => {
-    if (r.url().includes(`/api/v1/sessions/${LIVE_SESSION_ID}/laps`)) {
+    const call = connectCall(r.url());
+    if (call?.method === "ListLaps" && call.input.sessionId === LIVE_SESSION_ID) {
       lapAsks.push(Date.now());
     }
   });
@@ -246,7 +256,8 @@ test("a live session's new lap lands without a reload, under what is read (AC5)"
   await page.evaluate(() => window.scrollTo(0, 300));
   const scrolled = await page.evaluate(() => window.scrollY);
   expect(scrolled).toBeGreaterThan(0);
-  addLap(store, source, next);
+  // ecu commits the lap: what it published for it goes to NATS, and logbook stores it.
+  await addLap();
   await expect(row(page, next)).toBeVisible({ timeout: 6_000 });
   await expect(page.locator("tr[data-in-progress]")).toHaveText(`Lap ${next + 1} in progress`);
   expect(await page.evaluate(() => window.scrollY)).toBe(scrolled);
@@ -274,7 +285,7 @@ test("an unknown id says so, and a session with no laps is empty (AC6)", async (
   await expectAccessible(page, testInfo, "session-unknown");
 
   const { id } = await sessionTitled(page, RACE);
-  await page.route(`**/api/v1/sessions/${id}/laps`, (route) => route.fulfill({ json: { session_id: id, laps: [] } }));
+  await page.route(calls("ListLaps", id), (route) => route.fulfill({ json: { sessionId: id, laps: [] } }));
   await page.goto(`/sessions/${id}`);
   await expect(page.getByRole("heading", { name: "No laps stored for this session." })).toBeVisible();
   await expectAccessible(page, testInfo, "session-no-laps");
@@ -282,8 +293,8 @@ test("an unknown id says so, and a session with no laps is empty (AC6)", async (
 
 test("an unreadable store shows the error state, with Retry", async ({ page }, testInfo) => {
   const { id } = await sessionTitled(page, RACE);
-  await page.route(`**/api/v1/sessions/${id}`, (route) =>
-    route.fulfill({ status: 503, json: { error: "the index is busy, try again" } }),
+  await page.route(calls("GetSession", id), (route) =>
+    route.fulfill({ status: 503, json: { code: "unavailable", message: "the index is busy, try again" } }),
   );
   await page.goto(`/sessions/${id}`);
   const alert = page.getByRole("main").getByRole("alert");
@@ -388,8 +399,8 @@ test.describe("the race story over the compare store's no-stop race", () => {
     page,
   }, testInfo) => {
     const [noStop] = (process.env.E2E_MISSING_LAP ?? "").split("/");
-    const session = await (await page.request.get(`/api/v1/sessions/${noStop}`)).json();
-    const laps = (await (await page.request.get(`/api/v1/sessions/${noStop}/laps`)).json()).laps as LapRow[];
+    const session = await apiSession(page, noStop!);
+    const laps: LapRow[] = await apiLaps(page, noStop!);
     const complete = laps.filter((l) => !l.invalid && l.time_ms);
     expect(complete.length).toBeGreaterThanOrEqual(3);
     await page.goto(`/sessions/${noStop}`);

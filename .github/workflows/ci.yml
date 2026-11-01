@@ -55,8 +55,7 @@ jobs:
 
   # The web app, the same `make web-check` a laptop runs: ESLint, tsc, the generated
   # client against the pinned contracts tag, Vitest, the build and the bundle budget, on the Node in
-  # web/.node-version with web/package-lock.json's packages. Playwright comes back
-  # with those-who-run/paddock#130.
+  # web/.node-version with web/package-lock.json's packages. Playwright is `e2e`.
   web:
     runs-on: ubuntu-latest
     permissions:
@@ -72,6 +71,52 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - name: make web-check
         run: make web-check
+
+  # The end-to-end tests, `make web-e2e`: Playwright over the built app and the Go
+  # API, on NATS and the pinned logbook image serving web/e2e/store's data, with no
+  # ecu (those-who-run/paddock#130, the maintainer's decision D8), at the three
+  # viewports. The screenshots, and the traces of any failure, are an artifact.
+  # Not required yet: the maintainer adds `e2e` with the others
+  # (those-who-run/.github's scripts/repos.json).
+  e2e:
+    runs-on: ubuntu-latest
+    # The run takes about 8 min; a hung step (an apt mirror under the browser's
+    # install once held one for GitHub's 6 h) fails it instead.
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: "**/go.sum"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: web/.node-version
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: make web-deps
+        run: make web-deps
+      # Chromium and the libraries it needs, at the version package-lock.json pins.
+      - name: Install Chromium
+        working-directory: web
+        timeout-minutes: 10
+        run: npx playwright install --with-deps chromium
+      - name: make web-e2e
+        run: make web-e2e
+      - name: Keep the screenshots and traces
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-screenshots
+          path: |
+            web/test-results/screenshots
+            web/test-results/playwright
+          if-no-files-found: warn
+          retention-days: 14
 
   # The commit hooks on every file, gitleaks over the PR's commits, the PR title and
   # dependency review. No `if:` or `needs:`, so the required check always reports.

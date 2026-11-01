@@ -55,8 +55,9 @@ not in your checkout, follow the rule anyway.
   (`npm test`), the build and the bundle budget (`npm run budget`, limits in
   `bundle-budget.json`). `make check` at the root runs it too, and CI's `web`
   job runs it.
-- Playwright (`e2e/`, the browser check) is off until those-who-run/paddock#130
-  brings it back over v2's pit wall: its specs ran against v1's Python server.
+- Playwright (`e2e/`, the browser check) is `make web-e2e` at the root, CI's
+  `e2e` job (those-who-run/paddock#130). It needs Go, Docker (or
+  `E2E_CONTAINER=podman`) and Chromium (`npx playwright install chromium`).
 - `make web-dev` serves the app on http://localhost:5173 with the API proxied
   to a local pit wall.
 
@@ -124,10 +125,12 @@ fields, which the hooks map the generated messages to.
 - Component and unit tests with Vitest and Testing Library, next to the code
   (`*.test.ts`, `*.test.tsx`).
 - Playwright in `e2e/` runs the built app against the real pit wall server over
-  a store replayed from fixtures (off until those-who-run/paddock#130), at three
-  viewports: phone (390×844), iPad
+  logbook, serving a store made from v1's recordings replayed through ecu
+  (`e2e/store/`, which `e2e/store/make.go` makes; no ecu runs in CI), at three
+  viewports, one test at a time: phone (390×844), iPad
   (820×1180) and desktop (1440×900). Use the shared helpers there:
-  `viewports.ts`, `pitwall.ts`, `store.ts`, `engineer.ts`, `a11y.ts` (axe).
+  `viewports.ts`, `pitwall.ts` (the API in the pages' shapes), `store.ts`,
+  `engineer.ts` (the live KV bucket), `nats.ts`, `a11y.ts` (axe).
 - A UI PR links its CI screenshots at the three widths and `/_kit`'s. A check
   on the maintainer's own phone or iPad is theirs to tick: the PR says
   "Part of" until it is done.

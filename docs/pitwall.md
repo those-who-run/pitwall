@@ -1,15 +1,24 @@
 # The pit wall
 
-For the driver and anyone running the pit wall: the web app as a driver uses it, the data API behind it, the store it reads, the preview on a phone or iPad, and the pitwall image. Back to v1's [docs index](https://github.com/those-who-run/those-who-run/blob/v1.0.0/docs/README.md).
+For the driver and anyone running the pit wall: the pages, the shell, running
+it, the data API behind it and the pitwall image. The sessions themselves are
+`logbook`'s ([The store](#the-store)). An ADR named here is paddock's
+([the records](https://github.com/those-who-run/paddock/tree/main/docs/adr)),
+unless it says v1's.
 
-This page came over from v1 with the web app (those-who-run/paddock#120). "Running it", "The data API" and "The pitwall image" describe v2's server (those-who-run/paddock#124, those-who-run/paddock#131); the rest still describes v1 until those-who-run/paddock#127 brings v2's.
+The pit wall is on one address, the deployment overlay's: v2's pit wall took
+v1's address, and v1's pit wall is gone (ADR 0012). A results card's old link,
+`/?session=<id>`, keeps working there, for v2's sessions and for v1's once
+`logbook` has imported them, as they keep v1's ids (ADR 0009), and opens its
+session whether it was deleted or not.
 
 ## Pages
 
-The pit wall is a React app over the session store, served with its
-data API by `those-who-run pitwall` on port 9852 (`--port` or
-`GT7_PITWALL_PORT`, `--address` to bind; ADR 0003). One column, so it works on
-a phone straight after a race:
+The pit wall is a React app over `logbook`'s sessions, served with its data
+API from one origin by `pitwall` ([Running it](#running-it); one origin is
+v1's [ADR 0003](https://github.com/those-who-run/those-who-run/blob/v1.0.0/docs/adr/0003-ui-stack.md),
+which paddock's [v1 records](https://github.com/those-who-run/paddock/blob/main/docs/adr/README.md#v1s-records)
+keep for v2). One column, so it works on a phone straight after a race:
 
 - **Sessions** (`/`): grouped by day in your browser's time zone, newest first,
   each with its results card (title, result, best lap, car, fuel used). The
@@ -20,28 +29,35 @@ a phone straight after a race:
 - **A session** (`/sessions/<id>`): the result first, then stat tiles, the race
   story (lap time and position by lap) and the laps: time, gap to the best lap,
   fuel used and left, position (only in a field GT7 flags, as on the card), top
-  speed and flags: **pit** and **out** for the in-lap and out-lap the pit-stop
-  detector stored (tyre-only stops included; sessions stored before it fall back
-  to a rise in fuel), **partial** for the lap the session ended in. GT7 does not
-  report track limits. Pick two laps to compare; the picks are in the URL.
+  speed and flags: **pit** and **out** for the in-lap and out-lap `ecu`'s
+  pit-stop detector marked (tyre-only stops included), **restart** for a lap an
+  engineer restart fell in, and **partial** for a lap with no full time, such as
+  the one the session ended in. GT7 does not report track limits. Pick two laps
+  to compare; the picks are in the URL.
 - **Lap compare** (`/sessions/<id>/compare?a=&b=`): speed, throttle, brake, gear
   and RPM of two laps over time from each lap's start, from the same session or
   another at the same track, with one cursor across every chart (a horizontal
-  drag scrubs on a phone), drag or pinch to zoom. Comparing by distance instead of
-  time is planned.
+  drag scrubs on a phone), drag or pinch to zoom, and a double tap to reset. The
+  track map shows lap A's line in plan, coloured by the pedals or by speed, with
+  lap B dashed over it and both cars at the cursor; a tap on it moves the
+  cursor. Comparing by distance instead of time is planned.
 
 | | Phone | Desktop |
 |---|---|---|
 | Sessions | ![The session list on a phone: today's sessions as cards, each with its track, kind, car, time, result and best lap](assets/screens/phone/sessions.png) | ![The session list on a desktop: filters for track, car, kind and date over today's four sessions](assets/screens/desktop/sessions.png) |
 | A session | ![A 12-lap race at Circuit Gilles Villeneuve on a phone: P15 of 20, retired on lap 3, and stat tiles for best lap, average, laps, fuel used, pit stops and driving time, then the laps](assets/screens/phone/session.png) | ![The same race on a desktop: the result, the stat tiles and the lap table, with lap 1 the best and lap 3 partial](assets/screens/desktop/session.png) |
-| Lap compare | ![Lap compare on a phone: lap 1 against lap 2 of the race, the cursor readout, and the speed and throttle charts](assets/screens/phone/compare.png) | ![Lap compare on a desktop: lap 1, the best, against lap 2, with speed and throttle charts of both laps](assets/screens/desktop/compare.png) |
+| Lap compare | ![Lap compare on a phone: lap 1 against lap 2 of the race, the cursor readout, the channel toggles and the track map coloured by the pedals](assets/screens/phone/compare.png) | ![Lap compare on a desktop: lap 1, the best, against lap 2, with speed and throttle charts of both laps beside the track map coloured by the pedals](assets/screens/desktop/compare.png) |
 | `/_kit` | ![The component kit on a phone: lap times, gaps and positions in each of their states](assets/screens/phone/kit.png) | ![The component kit on a desktop: lap times, gaps, positions and kind badges in each of their states, loading included](assets/screens/desktop/kit.png) |
 
-`/_kit` is the component kit's review page (ADR 0004), not a page a driver
-uses.
+`/_kit` is the component kit's review page (v1's
+[ADR 0004](https://github.com/those-who-run/those-who-run/blob/v1.0.0/docs/adr/0004-design-language.md)),
+not a page a driver uses.
 
-A results card's old link, `/?session=<id>`, opens that session, deleted or
-not.
+The screenshots are made by `make docs-screenshots`
+(`web/playwright.docs.config.ts`) over the e2e suite's store, with the
+engineer idle and no session open. CI's Docs screenshots workflow runs it, by
+hand or on a PR that changes what makes them, and uploads them as the
+`docs-screens` artifact: unzip it over `docs/assets/screens/` and commit.
 
 A closed session's page has **Delete**, which asks first, naming the
 session's track, car and date. A deleted session is left out of the list and
@@ -56,9 +72,9 @@ wordmark and the **live engineer chip**, which asks `GetEngineStatus` every
 "Replay", "Demo", "Idle" (or "In the menus"), or "Engineer offline" when the
 engineer doesn't answer; the pages carry on either way. Tap it for the
 engineer's version, telemetry and voice ("Unknown" when `radio` says nothing
-of it), a link to the live session, and the pit wall's own version. The two
-version apart in v2, so a difference is not a warning
-(those-who-run/paddock#125 R7). The sections' navigation (`web/src/app/sections.ts`) appears once
+of it), a link to the live session, and the pit wall's own version, from
+`/healthz`. The engineer and the pit wall are released apart in v2, so their
+versions differing is not a warning (those-who-run/paddock#125 R7). The sections' navigation (`web/src/app/sections.ts`) appears once
 there are two. **Add to Home Screen** on the iPhone (Safari, Share, Add to Home
 Screen) gives the 走り屋 icon and opens the pit wall full screen with no Safari
 bars, from `web/public/manifest.webmanifest`; there is no service worker, so a
@@ -77,34 +93,44 @@ make web-build
 TWR_NATS_URL=nats://127.0.0.1:4222 TWR_PITWALL_STATIC_DIR=web/dist go run ./cmd/pitwall   # http://localhost:8080
 ```
 
+Its NATS needs `logbook` on it for the sessions, and a live `ecu` writing the
+`live` bucket for the chip. paddock's compose stack (`deploy/compose`) has
+`logbook`, with its NATS on `127.0.0.1:4222`, but no live `ecu`: its one `ecu`
+is the one-shot `replay` service, which writes `ecu.status.replay-<run>`, and
+the chip reads only the live source's keys, so under compose the chip says
+"Engineer offline". It runs this pit wall too: `make pitwall` in
+paddock starts the image at http://localhost:9852 (host port 9852 to the
+container's 8080, v1's port), on the sessions of `TWR_PITWALL_SRC`,
+`replay-compose` by default, which is what its `make replay` stores. Its
+`logbook` takes port 8080 on the host, so a pit wall run from this checkout
+beside it needs another `ADDR`, such as `ADDR=127.0.0.1:8081`, and
+`TWR_PITWALL_SRC=replay-compose` to show the replays. `pitwall -version` prints
+the version and exits.
+
 Its configuration, from the environment (the `TWR_*` prefix is the
 maintainer's decision D5, 2026-10-31; `ADDR` and `LOG_LEVEL` are every
 component's):
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `ADDR` | `:8080` | Where it listens; compose publishes it on 9852, as v1's port. |
+| `ADDR` | `:8080` | Where it listens; paddock's compose publishes the container's 8080 on 9852, v1's port. |
 | `LOG_LEVEL` | `info` | `debug` adds an access log line per request: method, path, status and time, never a header or the query. |
 | `TWR_NATS_URL` | `nats://127.0.0.1:4222` | The NATS server `logbook` and the `live` bucket are on. NATS down at the start doesn't stop the pit wall: it keeps trying, and serves the web app meanwhile. |
 | `TWR_PITWALL_STATIC_DIR` | unset; `/web` in the image | The built web app. Unset serves the API and `/healthz` only. |
 | `TWR_PITWALL_SRC` | `live,v1-import` | The sources whose sessions it shows, comma separated, in order of preference: v2's own and v1's imported history (decision D7). A list naming no source is an error, never "every source". |
 | `TWR_PITWALL_STALE` | `15s` | How old `ecu`'s live status may be before the chip says "Engineer offline". |
 
-It has no login: keep it on the LAN (decision D1). It stops within 1 s of
-SIGTERM, so a rollout never waits on it.
+It has no login: keep it on the home network (decision D1, ADR 0011). It
+stops within 1 s of SIGTERM, so a rollout never waits on it.
 
-## The preview on the phone and iPad
+## On the phone and iPad
 
-For a pit wall that runs in Kubernetes. **On the phone and iPad from a
-laptop**: `make web-preview PREVIEW_CONTEXT=<kube context>` builds `web/dist`, copies a deployed store into
-`.preview/` (git-ignored) by `tar` out of the pit wall pod's `/data` with
-`kubectl exec` (it only reads there, never writes), and runs `those-who-run
-pitwall --address 0.0.0.0 --static web/dist` over the copy. Open
-`http://<laptop>:9852` on the same network. `PREVIEW_CONTEXT` names the kube
-context the pit wall runs in and has no default. `/api/engine/*` goes to the live
-engineer, on port 9850 of the node its pod runs on (asked of the cluster), so
-the engineer's status is live while the sessions are the copy;
-`PREVIEW_ENGINEER` overrides it.
+Open the deployed pit wall. v1's `make web-preview`, which copied v1's store
+out of the pit wall's pod and served the copy from a laptop, has no v2
+counterpart: v2's pit wall holds no data to copy. To try a build from a laptop
+on a phone on the same network, run it as in [Running it](#running-it) with
+`ADDR=0.0.0.0:8081` and open the laptop's address on that port; the sessions
+and the chip are whatever its NATS has.
 
 ## The data API
 
@@ -125,6 +151,8 @@ browser's cache works. Its two writes, `DeleteSession` and `RestoreSession`
 | `DeleteSession` (POST) | Deletes a closed session, softly: `logbook` keeps its rows and lap files, the list and lap compare leave it out, and its page still opens, with `deleted_at` set | none |
 | `RestoreSession` (POST) | Brings a deleted session back | none |
 | `GET /healthz` (plain HTTP) | `ok`, `version`, and whether `nats` and `logbook` answered | `GET /healthz` |
+
+There is no `/metrics` yet: those-who-run/paddock#126 adds it.
 
 - **From `logbook`.** Each data method asks `logbook`'s micro endpoints
   (`svc.logbook.*`, `twr.store.v1`) for the sources in `TWR_PITWALL_SRC`, and
@@ -170,42 +198,19 @@ browser's cache works. Its two writes, `DeleteSession` and `RestoreSession`
   when `TWR_PITWALL_STATIC_DIR` is set and its `index.html` can't be read.
 - **The web app** is served from `TWR_PITWALL_STATIC_DIR` on every other path,
   with `index.html` for client routes such as `/sessions/<id>`, `/_kit` and
-  v1's results-card link `/?session=<id>` (permanent, ADR 0009 and 0011).
+  v1's results-card link `/?session=<id>` (permanent: ADR 0009 and 0012).
   Hashed files under `assets/` are cached for a year, and a missing one is a
   404; `index.html` is never cached.
 
 ## The store
 
-Every frame of every lap is kept, so the pit wall can show
-racing lines, traces and growth over time. Under `GT7_DATA_DIR`:
-
-```
-index.sqlite                      sessions and laps tables, for listing and filtering
-index.sqlite-wal, -shm            SQLite's write-ahead log, while a process has it open
-engineer.lock                     the writer lock: held by whatever is writing the store
-sessions/<id>/lap-NN.parquet      60 Hz frames for that lap, ZSTD compressed
-sessions/<id>/summary.json        human-readable summary
-```
-
-Frames are buffered in memory and written on a background thread when the lap
-completes, so a crash loses at most the lap in progress and callouts are never
-held up by disk. A lap's row goes into the index only once its file is
-complete, so the pit wall never shows a lap without its frames. A partial lap at the end of a session is written with
-`complete = 0`. Restarting from the pause menu closes the session and opens a
-new one; quitting closes it; Ctrl-C closes whatever is open. Budget roughly
-20 MB per hour of driving (17.5 to 23 MB measured). Parquet is written and
-read with DuckDB; any Parquet-aware tool can read the files. From 0.3 frames also carry the body
-rotation (`rot_x`, `rot_y`, `rot_z`, `orientation`) and spin (`ang_vel_*`),
-raw from the packet, for drift detection; older laps lack those columns.
-
-The index is in SQLite's WAL mode, so the pit wall reading it never holds up
-the engineer's writes. There is one writer at a time (ADR 0001): `run` holds
-an exclusive lock on `engineer.lock` for as long as it is up, and every other
-command that writes the store (`tracks backfill`, `post`, `rebuild-best`,
-`replay --store` into it) refuses with exit code 1 while it does. Use the pit
-wall, or stop the engineer first. The engineer likewise refuses to start while
-one of those is running.
-The pit wall never takes the lock.
+The pit wall has none, and mounts no volume. Every session, lap and frame is
+`logbook`'s, the only reader and writer of its data volume (ADR 0003 and
+0007); the pit wall reads them through `logbook`'s services
+([The data API](#the-data-api)). [`logbook`'s README](https://github.com/those-who-run/logbook#the-store)
+describes the store. v1's store (its SQLite index, lap files and writer lock)
+stays with v1, and its history reaches the pit wall through `logbook`'s
+import (ADR 0009).
 
 ## The pitwall image
 

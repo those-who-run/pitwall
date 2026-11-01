@@ -2,18 +2,13 @@ import { defineConfig } from "@playwright/test";
 
 import { VIEWPORTS } from "./e2e/viewports";
 
-// Not brought over to v2 yet: those-who-run/paddock#130 was trimmed to leave the
-// docs' screenshots out (the Rosberg plan, 2026-10-31), and the global setup no
-// longer reads E2E_REPLAY_CLOCK or E2E_NO_LIVE_SESSION.
-//
-// The docs' screenshots (#336): `make docs-screenshots` runs this, never
-// `make web-check`. The same global setup as the e2e suite (the built app on the
-// real pit wall over the replayed fixtures, with the stub engineer), but the store
-// dated from a fixed time, so every run gives the same pictures. Writes
+// The docs' screenshots (#336; those-who-run/paddock#135): `make
+// docs-screenshots` runs this, and CI's docs-screenshots workflow, never `make
+// web-check`. The same global setup as the e2e suite (the built app on the Go API
+// over NATS and logbook's store, the engineer in the live bucket). The store's
+// sessions are dated by web/e2e/store/make.go and the browser's clock is fixed
+// (./e2e/pitwall.ts), so every run gives the same pictures. Writes
 // docs/assets/screens/<viewport>/<page>.png.
-
-/** The replayed sessions start here, an hour apart (./e2e/global-setup.ts). */
-process.env.E2E_REPLAY_CLOCK ??= String(Date.UTC(2026, 9, 18, 8, 0, 0) / 1000);
 
 /** No open session: the engineer chip says "Idle", so no card may say "Running". */
 process.env.E2E_NO_LIVE_SESSION = "1";
@@ -26,14 +21,16 @@ export default defineConfig({
   globalSetup: "./e2e/global-setup.ts",
   outputDir: "./test-results/docs",
   forbidOnly: !!process.env.CI,
-  fullyParallel: true,
-  reporter: "list",
+  // One worker, as the e2e suite: the engineer is the live bucket every test shares.
+  workers: 1,
+  reporter: process.env.CI ? [["list"], ["github"]] : "list",
   use: {
     browserName: "chromium",
     timezoneId: "UTC",
     locale: "en-GB",
     reducedMotion: "reduce",
     colorScheme: "dark",
+    trace: "retain-on-failure",
   },
   projects: VIEWPORTS.filter((v) => SIZES.includes(v.name)).map((v) => ({
     name: v.name,

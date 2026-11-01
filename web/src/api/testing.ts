@@ -113,6 +113,7 @@ export function sessionJson(s: Partial<Session>): Json {
     joinedOnLap: s.joined_on_lap,
     continued: s.continued,
     restartLaps: s.restart_laps,
+    deletedAt: timestamp(s.deleted_at),
   });
 }
 
@@ -183,6 +184,8 @@ function code(status: number): string {
       return "invalid_argument";
     case 404:
       return "not_found";
+    case 409:
+      return "failed_precondition";
     case 502:
     case 503:
       return "unavailable";
@@ -192,7 +195,13 @@ function code(status: number): string {
 }
 
 /** HTTP's status for each Connect code, as the Connect protocol sends it. */
-const httpStatus: Record<string, number> = { invalid_argument: 400, not_found: 404, unavailable: 503, internal: 500 };
+const httpStatus: Record<string, number> = {
+  invalid_argument: 400,
+  not_found: 404,
+  failed_precondition: 400,
+  unavailable: 503,
+  internal: 500,
+};
 
 /** `response`, a v1 answer to `request`, as the Connect API answers. A request
  * that is not a Connect call gets `response` as it is. */

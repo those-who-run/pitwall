@@ -1,7 +1,7 @@
 // TanStack Query hooks over the generated Connect client: how every component
 // reads data. A page that needs a new method adds a hook here, not a fetch of its
 // own. Each hook maps the generated messages to the pages' shapes (./adapt.ts).
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import * as adapt from "./adapt";
 import type { EngineStatus } from "./adapt";
@@ -233,4 +233,41 @@ export function useTrace(id: string, lap: number | null, points: number) {
 /** The API answered 404: no such session or lap, or the lap's file is not there. */
 export function isNotFound(error: unknown): boolean {
   return error instanceof ApiError && error.status === 404;
+}
+
+/** Deletes a closed session, or restores a deleted one (DeleteSession and
+ * RestoreSession, ADR 0014 in paddock). The answer is the session as it now is,
+ * which the session page shows at once; then every list is asked again, so
+ * the session list and lap compare leave it out, or show it again. Deleting an
+ * open session is a 409 ApiError. */
+function useSessionWrite(id: string, method: "deleteSession" | "restoreSession") {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { session } = await client[method]({ sessionId: id });
+      if (!session) {
+        throw new ApiError(404, "no such session");
+      }
+      return adapt.session(session);
+    },
+    onSuccess: async (session) => {
+      queryClient.setQueryData(queryKeys.session(id), session);
+      // Everything under "sessions" but this one, which is current: the lists,
+      // lap compare's other sessions and this session's laps.
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.sessions,
+        predicate: (q) => !(q.queryKey.length === 2 && q.queryKey[1] === id),
+      });
+    },
+  });
+}
+
+/** Deletes the session (DeleteSession). */
+export function useDeleteSession(id: string) {
+  return useSessionWrite(id, "deleteSession");
+}
+
+/** Restores the deleted session (RestoreSession). */
+export function useRestoreSession(id: string) {
+  return useSessionWrite(id, "restoreSession");
 }

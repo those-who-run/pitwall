@@ -23,12 +23,14 @@ const REPO = "those-who-run/contracts";
 /** contracts' examples of the API's answers (examples/pitwall/v1/), fetched by
  * name: a name contracts drops fails the fetch. */
 export const EXAMPLES = [
+  "delete_session_response.json",
   "get_engine_status_offline.json",
   "get_engine_status_response.json",
   "get_session_response.json",
   "get_trace_response.json",
   "list_laps_response.json",
   "list_sessions_response.json",
+  "restore_session_response.json",
 ];
 
 /** The contracts version a go.mod requires, or null when it requires none. */

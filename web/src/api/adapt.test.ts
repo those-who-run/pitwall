@@ -11,6 +11,7 @@ import { ApiError, client, health } from "./client";
 import type { Session } from "./adapt";
 import type { Input } from "./client";
 import type {
+  DeleteSessionResponseJson,
   EngineStatusJson,
   GetEngineStatusResponseJson,
   GetSessionResponseJson,
@@ -18,9 +19,12 @@ import type {
   LapRowJson,
   ListLapsResponseJson,
   ListSessionsResponseJson,
+  RestoreSessionResponseJson,
   SessionJson,
   TraceJson,
 } from "./gen/twr/pitwall/v1/pitwall_pb";
+import deleteExample from "./gen/examples/delete_session_response.json?raw";
+import restoreExample from "./gen/examples/restore_session_response.json?raw";
 import engineJsonExample from "./gen/examples/get_engine_status_response.json?raw";
 import offlineExample from "./gen/examples/get_engine_status_offline.json?raw";
 import sessionExample from "./gen/examples/get_session_response.json?raw";
@@ -113,6 +117,7 @@ describe("the adapter on contracts' examples", () => {
     joined_on_lap: null,
     continued: false,
     restart_laps: [],
+    deleted_at: null,
   };
 
   it("maps GetSession's", () => {
@@ -147,6 +152,13 @@ describe("the adapter on contracts' examples", () => {
     const lengths = new Set([t.t, t.speed_kph, t.throttle_pct, t.brake_pct, t.gear, t.rpm, t.x, t.z].map((c) => c.length));
     expect([...lengths]).toEqual([t.t.length]);
     expect(t.speed_kph[2]).toBe(63.2);
+  });
+
+  it("maps DeleteSession's, deleted_at and all, and RestoreSession's, without it", () => {
+    const deleted = adapt.session((JSON.parse(deleteExample) as DeleteSessionResponseJson).session!);
+    expect(deleted).toEqual({ ...SUZUKA, deleted_at: Date.parse("2026-11-01T19:42:07.512Z") / 1000 });
+    const restored = adapt.session((JSON.parse(restoreExample) as RestoreSessionResponseJson).session!);
+    expect(restored).toEqual(SUZUKA);
   });
 
   it("maps GetEngineStatus', and its offline answer to no engineer", () => {
@@ -239,6 +251,27 @@ describe("the client (R1, R6)", () => {
     expect(err).toBeInstanceOf(ApiError);
     expect((err as ApiError).status).toBe(status);
     expect((err as ApiError).message).toBe("no such session");
+  });
+
+  it("writes with a Connect POST of the request's JSON, never cached", async () => {
+    const fetch = answer(Response.json({ session: { sessionId: "a" } }));
+    expect(await client.deleteSession({ sessionId: "a b" })).toEqual({ session: { sessionId: "a" } });
+    const request = fetch.mock.calls[0]![0] as Request;
+    expect(request.method).toBe("POST");
+    expect(new URL(request.url).pathname).toBe("/twr.pitwall.v1.PitwallService/DeleteSession");
+    expect(new URL(request.url).search).toBe("");
+    expect(request.headers.get("Content-Type")).toBe("application/json");
+    expect(request.cache).toBe("no-store");
+    expect(await request.json()).toEqual({ sessionId: "a b" });
+    answer(Response.json({}));
+    await client.restoreSession({ sessionId: "a" });
+    expect(new URL((fetch.mock.calls[1]![0] as Request).url).pathname).toBe("/twr.pitwall.v1.PitwallService/RestoreSession");
+  });
+
+  it("Connect's failed_precondition, deleting an open session, is an ApiError 409", async () => {
+    answer(Response.json({ code: "failed_precondition", message: "the session is open" }, { status: 400 }));
+    const err = (await client.deleteSession({ sessionId: "x" }).catch((e: unknown) => e)) as ApiError;
+    expect([err.status, err.message]).toEqual([409, "the session is open"]);
   });
 
   it("an answer that is not Connect's error keeps its HTTP status", async () => {

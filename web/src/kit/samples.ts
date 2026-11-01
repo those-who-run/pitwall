@@ -53,6 +53,7 @@ function session(over: Partial<Session> & Pick<Session, "session_id">): Session 
     joined_on_lap: null,
     continued: false,
     restart_laps: [],
+    deleted_at: null,
     ...over,
   };
 }

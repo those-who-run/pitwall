@@ -1,7 +1,7 @@
 # The web app: rules for agents and contributors
 
 The pit wall's web app: a React single-page app built to static files and
-served, with a read-only data API, by the pit wall
+served, with its data API, by the pit wall
 ([ADR 0003](https://github.com/those-who-run/those-who-run/blob/v1.0.0/docs/adr/0003-ui-stack.md), from v1). It came over from
 `those-who-run/those-who-run` with its history (those-who-run/paddock#120).
 The rules for the whole repository are in [`../AGENTS.md`](../AGENTS.md) and,
@@ -95,7 +95,9 @@ v2's messages, service and JSON types, `format-cases.json` and contracts'
 examples of the API's answers (`examples/`, which `adapt.test.ts` reads) from
 the same tag. The tag must be the contracts version `../go.mod` requires;
 Renovate bumps both in one PR, and the check fails while they differ.
-`src/api/client.ts` speaks Connect's GET over `fetch`, its methods typed by the
+`src/api/client.ts` speaks Connect's GET over `fetch` for the reads, and POST
+with a JSON body for the two writes (`DeleteSession`, `RestoreSession`, ADR
+0014 in paddock), its methods typed by the
 generated service and JSON types, with only types imported, so no protobuf
 runtime is bundled (the maintainer's decision, 2026-10-31). Never edit `src/api/gen/` by hand: bump
 the tag (Renovate does) and run `npm run api`; `make web-check` fails while it

@@ -3,10 +3,11 @@
 // (./gen, those-who-run/paddock#127). Components use the hooks in ./hooks.ts,
 // never this; ESLint stops `fetch` and this module being used outside src/api/.
 //
-// It speaks Connect's protocol for a unary method with no side effects, which
-// is plain HTTP: a GET of /<service>/<method> with the request's protobuf JSON
-// in the query, answered with the response's JSON, or an error's JSON with its
-// code. Only types are imported from the generated code and protobuf-es, so no
+// It speaks Connect's protocol for a unary method, which is plain HTTP: a read
+// (no side effects) is a GET of /<service>/<method> with the request's protobuf
+// JSON in the query, and a write (DeleteSession, RestoreSession; ADR 0014 in
+// paddock) a POST of the JSON as the body, answered with the response's JSON,
+// or an error's JSON with its code. Only types are imported from the generated code and protobuf-es, so no
 // protobuf runtime is bundled: connect-web and protobuf-es's runtime would add
 // about 34 KB gzipped to every data page, past ADR 0003's 60 KB a route (the
 // maintainer's decision, 2026-10-31: keep this client).
@@ -28,8 +29,8 @@ export type Output<M extends Method> = MessageJsonType<Methods[M]["output"]>;
 export const SERVICE_PATH = "/twr.pitwall.v1.PitwallService/";
 
 /** A failed call, with the HTTP status it means (v1's ApiError): 404 for a
- * session or lap that isn't there, 400 a bad argument, 503 the pit wall's store
- * not answering. */
+ * session or lap that isn't there, 400 a bad argument, 409 deleting a session
+ * that is still open, 503 the pit wall's store not answering. */
 export class ApiError extends Error {
   readonly status: number;
 
@@ -44,6 +45,7 @@ export class ApiError extends Error {
 const statuses: Record<string, number> = {
   invalid_argument: 400,
   not_found: 404,
+  failed_precondition: 409,
   unimplemented: 404,
   unavailable: 503,
   deadline_exceeded: 504,
@@ -66,7 +68,25 @@ function here(path: string): URL {
  * (ADR 0003 point 6). fetch is looked up per call, so a test can replace it. */
 async function call<M extends Method>(method: M, input: Input<M>, signal: AbortSignal): Promise<Output<M>> {
   const query = new URLSearchParams({ connect: "v1", encoding: "json", message: JSON.stringify(input) });
-  const response = await fetch(new Request(here(`${SERVICE_PATH}${rpcName(method)}?${query}`), { signal }));
+  return answer<M>(await fetch(new Request(here(`${SERVICE_PATH}${rpcName(method)}?${query}`), { signal })));
+}
+
+/** One write: a POST of the request's JSON, never cached. The pit wall takes
+ * only a JSON or protobuf body, which is what keeps another site's page from
+ * writing (ADR 0014 point 8). */
+async function write<M extends Method>(method: M, input: Input<M>, signal?: AbortSignal): Promise<Output<M>> {
+  const request = new Request(here(`${SERVICE_PATH}${rpcName(method)}`), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Connect-Protocol-Version": "1" },
+    body: JSON.stringify(input),
+    cache: "no-store",
+    signal,
+  });
+  return answer<M>(await fetch(request));
+}
+
+/** A call's answer: its JSON, or an ApiError for Connect's error. */
+async function answer<M extends Method>(response: Response): Promise<Output<M>> {
   if (response.ok) {
     return (await response.json()) as Output<M>;
   }
@@ -89,6 +109,8 @@ export const client = {
   getTrace: (input: Input<"getTrace">, signal: AbortSignal) => call("getTrace", input, signal),
   listSameTrack: (input: Input<"listSameTrack">, signal: AbortSignal) => call("listSameTrack", input, signal),
   getEngineStatus: (input: Input<"getEngineStatus">, signal: AbortSignal) => call("getEngineStatus", input, signal),
+  deleteSession: (input: Input<"deleteSession">, signal?: AbortSignal) => write("deleteSession", input, signal),
+  restoreSession: (input: Input<"restoreSession">, signal?: AbortSignal) => write("restoreSession", input, signal),
 };
 
 /** The pit wall's GET /healthz, which is plain HTTP. Unhealthy (a 503) has the

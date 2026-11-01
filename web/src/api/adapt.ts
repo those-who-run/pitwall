@@ -61,6 +61,10 @@ export interface Session {
   joined_on_lap: number | null;
   continued: boolean;
   restart_laps: number[];
+  /** Unix seconds; null for a session that isn't deleted (ADR 0014 in
+   * paddock: a soft delete, which Restore undoes). Only the session page sees a
+   * deleted session: the list and lap compare leave it out. */
+  deleted_at: number | null;
 }
 
 export interface FilterOption {
@@ -233,6 +237,7 @@ export function session(s: SessionJson): Session {
     joined_on_lap: orNull(s.joinedOnLap),
     continued: s.continued ?? false,
     restart_laps: [...(s.restartLaps ?? [])],
+    deleted_at: seconds(s.deletedAt),
   };
 }
 

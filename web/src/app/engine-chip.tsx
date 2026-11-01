@@ -114,7 +114,7 @@ function Panel({
         </Link>
       )}
       <p className="border-t border-border-strong pt-2 text-meta text-muted">
-        Pit wall <span className="num">{pitwall ?? "version unknown"}</span> · Read-only
+        Pit wall <span className="num">{pitwall ?? "version unknown"}</span>
       </p>
     </div>
   );

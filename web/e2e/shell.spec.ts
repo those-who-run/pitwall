@@ -54,7 +54,7 @@ for (const s of STATES) {
     for (const text of [...s.panel, `Engineer${version}`, "Telemetry", "VoiceIn the voice channel"]) {
       await expect(panel).toContainText(text);
     }
-    await expect(panel).toContainText(`Pit wall ${version} · Read-only`);
+    await expect(panel).toContainText(`Pit wall ${version}`);
     await expect(panel).not.toContainText("deploy");
   });
 }
@@ -96,7 +96,7 @@ test("with the engineer down, the list still loads and the chip says so within 3
   ).toBe("rgb(163, 163, 163)");
   const panel = await openPopover(page);
   await expect(panel).toContainText("The sessions still work");
-  await expect(panel).toContainText(`Pit wall ${await pitwallVersion(page)} · Read-only`);
+  await expect(panel).toContainText(`Pit wall ${await pitwallVersion(page)}`);
   await screenshot(page, testInfo, "shell-offline");
 });
 
@@ -118,7 +118,7 @@ test("shows both versions, with no deploy warning, when they differ (AC3)", asyn
   await expect(chip(page).locator("[data-slot=deploy-marker]")).toHaveCount(0);
   const panel = await openPopover(page);
   await expect(panel).toContainText(`Engineer${OTHER_VERSION}`);
-  await expect(panel).toContainText(`Pit wall ${version} · Read-only`);
+  await expect(panel).toContainText(`Pit wall ${version}`);
   await expect(panel).not.toContainText("deploy");
   await screenshot(page, testInfo, "shell-versions");
 });

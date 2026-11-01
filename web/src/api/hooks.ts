@@ -1,10 +1,10 @@
 // TanStack Query hooks over the generated Connect client: how every component
 // reads data. A page that needs a new method adds a hook here, not a fetch of its
 // own. Each hook maps the generated messages to the pages' shapes (./adapt.ts).
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import * as adapt from "./adapt";
-import type { EngineStatus } from "./adapt";
+import type { EngineStatus, Session } from "./adapt";
 import { ApiError, client, health } from "./client";
 
 export { ApiError } from "./client";
@@ -233,4 +233,55 @@ export function useTrace(id: string, lap: number | null, points: number) {
 /** The API answered 404: no such session or lap, or the lap's file is not there. */
 export function isNotFound(error: unknown): boolean {
   return error instanceof ApiError && error.status === 404;
+}
+
+/** Deletes a closed session, or restores a deleted one (DeleteSession and
+ * RestoreSession, ADR 0014 in paddock). The answer is the session as it now is,
+ * which the session page shows at once (a read of it still in flight is
+ * cancelled first, so it can't land over the answer); then every list is asked
+ * again, so the session list and lap compare leave it out, or show it again.
+ * `onDone` is called with the answer even when the caller has unmounted, as
+ * the delete's confirm has by then. Deleting an open session is a 409
+ * ApiError; a 404 asks for the session again, so its page says it is gone. */
+function useSessionWrite(
+  id: string,
+  method: "deleteSession" | "restoreSession",
+  onDone?: (session: Session) => void,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { session } = await client[method]({ sessionId: id });
+      if (!session) {
+        throw new ApiError(404, "no such session");
+      }
+      return adapt.session(session);
+    },
+    onSuccess: async (session) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.session(id), exact: true });
+      onDone?.(session);
+      queryClient.setQueryData(queryKeys.session(id), session);
+      // Everything under "sessions" but this one, which is current: the lists,
+      // lap compare's other sessions and this session's laps.
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.sessions,
+        predicate: (q) => !(q.queryKey.length === 2 && q.queryKey[1] === id),
+      });
+    },
+    onError: async (error) => {
+      if (isNotFound(error)) {
+        await queryClient.invalidateQueries({ queryKey: queryKeys.session(id), exact: true });
+      }
+    },
+  });
+}
+
+/** Deletes the session (DeleteSession). */
+export function useDeleteSession(id: string, onDone?: (session: Session) => void) {
+  return useSessionWrite(id, "deleteSession", onDone);
+}
+
+/** Restores the deleted session (RestoreSession). */
+export function useRestoreSession(id: string, onDone?: (session: Session) => void) {
+  return useSessionWrite(id, "restoreSession", onDone);
 }

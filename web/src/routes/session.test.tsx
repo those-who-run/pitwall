@@ -12,7 +12,8 @@ import { engine, LAPS, liveSession, SESSIONS } from "@/kit/samples";
 import type { RaceStory as RaceStoryChart } from "@/session/race-story";
 
 import { Component } from "./session";
-import { v1Api, v1Url } from "@/api/testing";
+import { sessionJson, v1Api, v1Url } from "@/api/testing";
+import { sessionDate } from "@/lib/format";
 
 // The race story's chart needs a canvas, which jsdom lacks: a stand-in with a
 // button per point, so the page's side of it (when it shows, the picks and the
@@ -66,13 +67,29 @@ interface Api {
   session?: Session | { status: number; error: string };
   laps?: LapRow[] | { status: number; error: string };
   engine?: ReturnType<typeof engine> | null;
+  /** DeleteSession's and RestoreSession's failure, if they fail; otherwise
+   * they set or clear `session`'s deleted_at, as the pit wall does. */
+  writeError?: { status: number; error: string };
 }
+
+/** When the test's delete happened: Unix seconds. */
+const DELETED_AT = 1_793_000_000;
 
 /** Answers the API from `api`, which a test may change between asks. */
 function serve(api: Api) {
   return vi.spyOn(globalThis, "fetch").mockImplementation(v1Api(async (input) => {
-    const path = v1Url(input as Request).pathname;
+    const request = input as Request;
+    const path = v1Url(request).pathname;
     const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
+    // The writes, which v1 didn't have: answered in Connect's JSON as they are.
+    if (request.method === "POST") {
+      if (api.writeError) {
+        return json({ error: api.writeError.error }, api.writeError.status);
+      }
+      const deleted = path.endsWith("/DeleteSession");
+      api.session = { ...(api.session as Session), deleted_at: deleted ? DELETED_AT : null };
+      return json({ session: sessionJson(api.session) });
+    }
     const answer = (v: unknown) => {
       const failure = v as { status?: number; error?: string } | undefined;
       return failure?.status ? json({ error: failure.error }, failure.status) : json(v);
@@ -103,7 +120,7 @@ function renderAt(url: string) {
       <RouterProvider router={router} />
     </QueryClientProvider>,
   );
-  return router;
+  return Object.assign(router, { queryClient });
 }
 
 const lapAsks = (fetch: ReturnType<typeof serve>) =>
@@ -431,5 +448,114 @@ describe("Copy link (R9)", () => {
     expect((screen.getByRole("textbox", { name: "The session's link" }) as HTMLInputElement).value).toBe(
       `${window.location.origin}/sessions/20261018-191204`,
     );
+  });
+});
+
+// ADR 0014 (paddock): Delete, with a confirm naming the session, and Restore.
+describe("delete and restore", () => {
+  const writes = (fetch: ReturnType<typeof serve>) =>
+    fetch.mock.calls
+      .map(([r]) => r as Request)
+      .filter((r) => r.method === "POST")
+      .map((r) => new URL(r.url).pathname);
+
+  it("asks first, naming the track, car and date, and Cancel deletes nothing", async () => {
+    const user = userEvent.setup();
+    const fetch = serve({ session: SESSIONS.raceFinished, laps: LAPS });
+    renderAt("/sessions/20261018-191204");
+    await user.click(await screen.findByRole("button", { name: "Delete session" }));
+    const dialog = await screen.findByRole("dialog", { name: "Delete this session?" });
+    const name = dialog.querySelector("[data-slot=delete-name]")!.textContent;
+    const s = SESSIONS.raceFinished;
+    expect(name).toBe(`${s.track.name} · ${s.car} · ${sessionDate(s.started_at)}`);
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(writes(fetch)).toEqual([]);
+  });
+
+  it("deletes with a POST, then shows the session as deleted, with Restore", async () => {
+    const user = userEvent.setup();
+    const fetch = serve({ session: SESSIONS.raceFinished, laps: LAPS });
+    const { queryClient } = renderAt("/sessions/20261018-191204");
+    // A list the session was in: asked again after the delete.
+    const listKey = ["sessions", "list", {}];
+    queryClient.setQueryData(listKey, { sessions: [SESSIONS.raceFinished] });
+    await user.click(await screen.findByRole("button", { name: "Delete session" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+    const note = await screen.findByRole("region", { name: "Deleted" });
+    expect(note.textContent).toContain("isn't in the session list or lap compare");
+    // The focus goes to Restore, not back to the page's top.
+    await vi.waitFor(() => expect(document.activeElement).toBe(within(note).getByRole("button", { name: "Restore" })));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Delete session" })).toBeNull();
+    expect(writes(fetch)).toEqual(["/twr.pitwall.v1.PitwallService/DeleteSession"]);
+    const post = fetch.mock.calls.map(([r]) => r as Request).find((r) => r.method === "POST")!;
+    expect(post.headers.get("Content-Type")).toBe("application/json");
+    expect(await post.clone().json()).toEqual({ sessionId: "20261018-191204" });
+    expect(queryClient.getQueryState(listKey)!.isInvalidated).toBe(true);
+    // The rest of the page is still there.
+    expect(screen.getByRole("heading", { level: 2, name: SESSIONS.raceFinished.track.name })).toBeTruthy();
+
+    await user.click(within(note).getByRole("button", { name: "Restore" }));
+    await vi.waitFor(() => expect(screen.queryByRole("region", { name: "Deleted" })).toBeNull());
+    const again = await screen.findByRole("button", { name: "Delete session" });
+    await vi.waitFor(() => expect(document.activeElement).toBe(again));
+    expect(writes(fetch)).toEqual([
+      "/twr.pitwall.v1.PitwallService/DeleteSession",
+      "/twr.pitwall.v1.PitwallService/RestoreSession",
+    ]);
+  });
+
+  it("opens a deleted session, from an old link, as deleted", async () => {
+    serve({ session: { ...SESSIONS.raceFinished, deleted_at: DELETED_AT }, laps: LAPS });
+    renderAt("/sessions/20261018-191204");
+    const note = await screen.findByRole("region", { name: "Deleted" });
+    expect(within(note).getByRole("button", { name: "Restore" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Delete session" })).toBeNull();
+  });
+
+  it("has no Delete for a session that is still open", async () => {
+    serve({ session: { ...SESSIONS.raceFinished, closed: false }, laps: LAPS });
+    renderAt("/sessions/20261018-191204");
+    await screen.findByRole("table");
+    expect(screen.queryByRole("button", { name: "Delete session" })).toBeNull();
+  });
+
+  it("says why a delete failed, and keeps the dialog open", async () => {
+    const user = userEvent.setup();
+    serve({ session: SESSIONS.raceFinished, laps: LAPS, writeError: { status: 409, error: "the session is open" } });
+    renderAt("/sessions/20261018-191204");
+    await user.click(await screen.findByRole("button", { name: "Delete session" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+    expect((await within(dialog).findByRole("alert")).textContent).toContain("still open");
+    expect(screen.queryByRole("region", { name: "Deleted" })).toBeNull();
+  });
+
+  it("shows the not-found state when the session is gone by the delete", async () => {
+    const user = userEvent.setup();
+    const api: Api = { session: SESSIONS.raceFinished, laps: LAPS, writeError: { status: 404, error: "no such session" } };
+    serve(api);
+    renderAt("/sessions/20261018-191204");
+    await user.click(await screen.findByRole("button", { name: "Delete session" }));
+    const dialog = await screen.findByRole("dialog");
+    api.session = { status: 404, error: "no such session" };
+    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+    expect(await screen.findByText("No session 20261018-191204.")).toBeTruthy();
+  });
+
+  it("says why a restore failed", async () => {
+    const user = userEvent.setup();
+    serve({
+      session: { ...SESSIONS.raceFinished, deleted_at: DELETED_AT },
+      laps: LAPS,
+      writeError: { status: 503, error: "logbook did not answer" },
+    });
+    renderAt("/sessions/20261018-191204");
+    const note = await screen.findByRole("region", { name: "Deleted" });
+    await user.click(within(note).getByRole("button", { name: "Restore" }));
+    expect((await within(note).findByRole("alert")).textContent).toContain("Couldn't restore the session");
   });
 });

@@ -21,14 +21,19 @@ const (
 	SameTrack    = "svc.logbook.sessions.same_track"
 	LapsList     = "svc.logbook.laps.list"
 	LapsTrace    = "svc.logbook.laps.trace"
+	// The writes (ADR 0014 in paddock).
+	SessionsDelete  = "svc.logbook.sessions.delete"
+	SessionsRestore = "svc.logbook.sessions.restore"
 )
 
 var endpoints = map[string]string{
-	"sessions_list": SessionsList,
-	"sessions_get":  SessionsGet,
-	"same_track":    SameTrack,
-	"laps_list":     LapsList,
-	"laps_trace":    LapsTrace,
+	"sessions_list":    SessionsList,
+	"sessions_get":     SessionsGet,
+	"same_track":       SameTrack,
+	"laps_list":        LapsList,
+	"laps_trace":       LapsTrace,
+	"sessions_delete":  SessionsDelete,
+	"sessions_restore": SessionsRestore,
 }
 
 // Error is an error reply: NATS micro's Nats-Service-Error-Code and

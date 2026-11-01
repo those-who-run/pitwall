@@ -175,6 +175,7 @@ export function liveCardSession(
     joined_on_lap: null,
     continued: false,
     restart_laps: [],
+    deleted_at: null,
   };
   return {
     ...base,

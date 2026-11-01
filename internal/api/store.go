@@ -20,6 +20,9 @@ const (
 	subjectSameTrack    = "svc.logbook.sessions.same_track"
 	subjectLapsList     = "svc.logbook.laps.list"
 	subjectLapsTrace    = "svc.logbook.laps.trace"
+	// The writes (ADR 0014 in paddock).
+	subjectSessionsDelete  = "svc.logbook.sessions.delete"
+	subjectSessionsRestore = "svc.logbook.sessions.restore"
 )
 
 // StoreTimeout is how long a call to logbook may take before the pit wall answers
@@ -52,7 +55,8 @@ var (
 
 // call sends req to subject and decodes logbook's reply into resp. An error is a
 // Connect error the handler can return as it is: logbook's 400 is
-// invalid_argument, its 404 not_found, and no answer within the timeout, no
+// invalid_argument, its 404 not_found, its 409 (deleting an open session)
+// failed_precondition, and no answer within the timeout, no
 // responder or NATS down is unavailable.
 func (s *store) call(ctx context.Context, subject string, req, resp proto.Message) error {
 	data, err := marshal.Marshal(req)
@@ -88,6 +92,8 @@ func storeError(subject, code, text string) error {
 		return connect.NewError(connect.CodeInvalidArgument, text)
 	case 404:
 		return connect.NewError(connect.CodeNotFound, text)
+	case 409:
+		return connect.NewError(connect.CodeFailedPrecondition, text)
 	case 503:
 		return connect.NewError(connect.CodeUnavailable, text)
 	}

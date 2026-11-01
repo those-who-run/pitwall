@@ -7,6 +7,8 @@
 // The page, top to bottom: SessionHero, the joined-mid-session note, SessionTiles,
 // the race story (#300, with three complete laps or more), LapsTable, PickBar. The
 // race story and the table share the picks (`?pick=`) and the highlighted lap.
+// A closed session ends with Delete; a deleted one (ADR 0014 in paddock) leads
+// with the note that says so, and Restore.
 import { useQueryClient } from "@tanstack/react-query";
 import { InfoIcon } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
@@ -20,6 +22,7 @@ import { ErrorState } from "@/components/error-state";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SessionMenu } from "@/session/copy-link";
+import { DeletedNote, DeleteSession } from "@/session/delete-session";
 import { SessionHero, SessionHeroSkeleton } from "@/session/hero";
 import { LapsTable, LapsTableSkeleton } from "@/session/laps-table";
 import { bestAndNext, lapInProgress, parsePicks, togglePick } from "@/session/model";
@@ -177,6 +180,8 @@ export function Component() {
   const [picks, setPicks] = usePicks();
   const known = picks.filter((p) => rows?.some((l) => l.lap === p));
   const [highlight, setHighlight] = useState<number | null>(null);
+  // Where the focus goes after a delete (Restore) or a restore (Delete session).
+  const [focus, setFocus] = useState<"restore" | "delete" | null>(null);
 
   const missing = session.error instanceof ApiError && session.error.status === 404;
   usePageTitle(session.data?.title ?? (missing ? "Session not found" : `Session ${id}`));
@@ -207,6 +212,9 @@ export function Component() {
   const lapRows = rows ?? [];
   return (
     <article className="space-y-6">
+      {s.deleted_at != null && (
+        <DeletedNote session={s} focus={focus === "restore"} onRestored={() => setFocus("delete")} />
+      )}
       <SessionHero
         session={s}
         live={live?.state}
@@ -248,6 +256,11 @@ export function Component() {
           />
         )}
       </section>
+      {s.closed && s.deleted_at == null && (
+        <section aria-label="Delete" className="border-t pt-4">
+          <DeleteSession session={s} focus={focus === "delete"} onDeleted={() => setFocus("restore")} />
+        </section>
+      )}
     </article>
   );
 }

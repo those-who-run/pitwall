@@ -20,6 +20,10 @@ COVERAGE_FLOOR := 90
 # testdata and vendor. And web/, the web app, whose node_modules holds no Go of ours.
 GO_FILES = $(shell find . -path ./web -prune -o -name '*.go' -not -path '*/.*' -not -path '*/testdata/*' -not -path '*/vendor/*' -print)
 BUILD := build
+# The module's packages, without any npm put in web/node_modules (`make web-deps`):
+# one of them (flatted) ships a Go package, which would be vetted, tested at 0%
+# against the coverage floor and scanned as if it were ours. Evaluated when used.
+GO_PKGS = $(shell go list ./... | grep -v /web/node_modules/)
 
 .PHONY: help
 help:
@@ -85,7 +89,7 @@ tidy:
 
 .PHONY: vet
 vet:
-	go vet ./...
+	go vet $(GO_PKGS)
 
 .PHONY: lint
 lint:
@@ -97,18 +101,18 @@ lint:
 .PHONY: go-test
 go-test:
 	@mkdir -p $(BUILD)
-	CGO_ENABLED=1 go test -race -shuffle=on -covermode=atomic -coverprofile=$(BUILD)/cover.out -v ./... > $(BUILD)/test.log 2>&1; \
+	CGO_ENABLED=1 go test -race -shuffle=on -covermode=atomic -coverprofile=$(BUILD)/cover.out -v $(GO_PKGS) > $(BUILD)/test.log 2>&1; \
 	  status=$$?; grep -v -E '^(=== |\s+--- PASS|--- PASS)' $(BUILD)/test.log; exit $$status
 	@if grep -E '^\s*--- SKIP' $(BUILD)/test.log; then echo "a skipped test fails: fix it or remove it" >&2; exit 1; fi
 	@$(PY) scripts/go_coverage.py $(BUILD)/cover.out $(COVERAGE_FLOOR)
 
 .PHONY: build
 build:
-	go build ./...
+	go build $(GO_PKGS)
 
 .PHONY: vuln
 vuln:
-	$(GO_TOOL) $(GOVULNCHECK) ./...
+	$(GO_TOOL) $(GOVULNCHECK) $(GO_PKGS)
 
 .PHONY: links
 links:

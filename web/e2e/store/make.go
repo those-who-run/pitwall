@@ -17,7 +17,8 @@
 // source of its own, so one store serves every pit wall the specs start: each
 // lists the sources it shows in TWR_PITWALL_SRC (store.json says which).
 //
-// The --seed makes the session ids the same on every run, and the --clock dates
+// Each recording's sha256 is pinned below and must be the file's and paddock's
+// SOURCES.yaml's; store.json records it. The --seed makes the session ids the same on every run, and the --clock dates
 // each session. A store made again holds the same sessions, laps
 // and facts, though not the same bytes.
 //
@@ -92,7 +93,10 @@ const zeroLapSecs = 60
 type replay struct {
 	Src       string `json:"src"`
 	Recording string `json:"recording"`
-	Clock     string `json:"clock"`
+	// SHA256 is the recording's, as paddock's recordings/SOURCES.yaml lists it:
+	// the bytes the store came from. make checks the file against both.
+	SHA256 string `json:"sha256"`
+	Clock  string `json:"clock"`
 	// CutSecs keeps only the recording's first seconds (0 keeps it all).
 	CutSecs float64 `json:"cut_secs,omitempty"`
 	// KeepOpen replays with --keep-open, for the open session.
@@ -106,13 +110,13 @@ type replay struct {
 // later that day (web/e2e/pitwall.ts), so they are "Today". The last two are in
 // other stores than the first five, so their being the newest changes no list.
 var replays = []replay{
-	{Src: "replay-e2e-joined", Recording: "real-nuc-suzuka-joined-mid-race-2026-10-18.jsonl.gz", Clock: "2026-10-15T09:00:00Z"},
-	{Src: "replay-e2e-fuji", Recording: "real-nuc-fuji-timed-2026-10-15.jsonl.gz", Clock: "2026-10-15T10:00:00Z"},
-	{Src: "replay-e2e-gilles", Recording: "real-nuc-gilles-villeneuve-race-2026-10-17.jsonl.gz", Clock: "2026-10-15T11:00:00Z"},
-	{Src: "replay-e2e-live", Recording: "real-nuc-suzuka-pit-stop-2026-10-15.jsonl.gz", Clock: "2026-10-15T11:59:59Z", KeepOpen: true},
-	{Src: "replay-e2e-pit-stop", Recording: "real-nuc-suzuka-pit-stop-2026-10-15.jsonl.gz", Clock: "2026-10-15T12:00:00Z"},
-	{Src: "replay-e2e-zero-lap", Recording: "real-nuc-gilles-villeneuve-race-2026-10-17.jsonl.gz", Clock: "2026-10-15T12:30:00Z", CutSecs: zeroLapSecs},
-	{Src: "replay-e2e-no-stop", Recording: "real-nuc-suzuka-no-stop-2026-10-15.jsonl.gz", Clock: "2026-10-15T12:45:00Z"},
+	{Src: "replay-e2e-joined", Recording: "real-nuc-suzuka-joined-mid-race-2026-10-18.jsonl.gz", SHA256: "dd7c7dd4553ddf2549e49ba32e54341f825a2b7900d90fdca0f8e25c364c52cf", Clock: "2026-10-15T09:00:00Z"},
+	{Src: "replay-e2e-fuji", Recording: "real-nuc-fuji-timed-2026-10-15.jsonl.gz", SHA256: "326dc39244a449c10798608b130d95e96317822beb61d995970ca7df298c9c10", Clock: "2026-10-15T10:00:00Z"},
+	{Src: "replay-e2e-gilles", Recording: "real-nuc-gilles-villeneuve-race-2026-10-17.jsonl.gz", SHA256: "ca8f5c2a95cb50a9e2b8a7717338f6fb927d64b3ac87046f1438cf44c91daa11", Clock: "2026-10-15T11:00:00Z"},
+	{Src: "replay-e2e-live", Recording: "real-nuc-suzuka-pit-stop-2026-10-15.jsonl.gz", SHA256: "9684c2ee9e1da825b0870b22bfec81ecff833a3ae20e523c0efc61e8863e5bdb", Clock: "2026-10-15T11:59:59Z", KeepOpen: true},
+	{Src: "replay-e2e-pit-stop", Recording: "real-nuc-suzuka-pit-stop-2026-10-15.jsonl.gz", SHA256: "9684c2ee9e1da825b0870b22bfec81ecff833a3ae20e523c0efc61e8863e5bdb", Clock: "2026-10-15T12:00:00Z"},
+	{Src: "replay-e2e-zero-lap", Recording: "real-nuc-gilles-villeneuve-race-2026-10-17.jsonl.gz", SHA256: "ca8f5c2a95cb50a9e2b8a7717338f6fb927d64b3ac87046f1438cf44c91daa11", Clock: "2026-10-15T12:30:00Z", CutSecs: zeroLapSecs},
+	{Src: "replay-e2e-no-stop", Recording: "real-nuc-suzuka-no-stop-2026-10-15.jsonl.gz", SHA256: "0477116644a19ab97aac4c19dbecaa4129ee691c57378562cf36c7a094c4aeaa", Clock: "2026-10-15T12:45:00Z"},
 }
 
 // line is one message as ecu published it: logbook's replay fixtures' form.
@@ -199,7 +203,10 @@ func run(paddock, natsServer, container, out string) error {
 	published := map[string][]line{}
 	for _, r := range replays {
 		path := filepath.Join(paddock, "recordings", r.Recording)
-		if err := checkSum(path, sums[r.Recording]); err != nil {
+		if sums[r.Recording] != r.SHA256 {
+			return fmt.Errorf("%s: SOURCES.yaml has sha256 %q, make.go %s", r.Recording, sums[r.Recording], r.SHA256)
+		}
+		if err := checkSum(path, r.SHA256); err != nil {
 			return err
 		}
 		if r.CutSecs > 0 {

@@ -46,20 +46,18 @@ keep for v2). One column, so it works on a phone straight after a race:
 |---|---|---|
 | Sessions | ![The session list on a phone: today's sessions as cards, each with its track, kind, car, time, result and best lap](assets/screens/phone/sessions.png) | ![The session list on a desktop: filters for track, car, kind and date over today's four sessions](assets/screens/desktop/sessions.png) |
 | A session | ![A 12-lap race at Circuit Gilles Villeneuve on a phone: P15 of 20, retired on lap 3, and stat tiles for best lap, average, laps, fuel used, pit stops and driving time, then the laps](assets/screens/phone/session.png) | ![The same race on a desktop: the result, the stat tiles and the lap table, with lap 1 the best and lap 3 partial](assets/screens/desktop/session.png) |
-| Lap compare | ![Lap compare on a phone: lap 1 against lap 2 of the race, the cursor readout, and the speed and throttle charts](assets/screens/phone/compare.png) | ![Lap compare on a desktop: lap 1, the best, against lap 2, with speed and throttle charts of both laps](assets/screens/desktop/compare.png) |
+| Lap compare | ![Lap compare on a phone: lap 1 against lap 2 of the race, the cursor readout, the channel toggles and the track map coloured by the pedals](assets/screens/phone/compare.png) | ![Lap compare on a desktop: lap 1, the best, against lap 2, with speed and throttle charts of both laps beside the track map coloured by the pedals](assets/screens/desktop/compare.png) |
 | `/_kit` | ![The component kit on a phone: lap times, gaps and positions in each of their states](assets/screens/phone/kit.png) | ![The component kit on a desktop: lap times, gaps, positions and kind badges in each of their states, loading included](assets/screens/desktop/kit.png) |
 
 `/_kit` is the component kit's review page (v1's
 [ADR 0004](https://github.com/those-who-run/those-who-run/blob/v1.0.0/docs/adr/0004-design-language.md)),
 not a page a driver uses.
 
-The screenshots are still v1's pit wall: v1's docs config made them
-(`make docs-screenshots`, those-who-run/those-who-run#381) before the web app
-moved here. v2 has no such target yet: `web/playwright.docs.config.ts` and
-`web/e2e/docs.screens.ts` came over, but the e2e set-up has no switch to leave
-out its open session, and the docs spec's clock is still v1's, so the pictures
-have not been made against v2. The pages they show are the same pages, but the
-lap compare pictures predate the track map.
+The screenshots are made by `make docs-screenshots`
+(`web/playwright.docs.config.ts`) over the e2e suite's store, with the
+engineer idle and no session open. CI's Docs screenshots workflow runs it, by
+hand or on a PR that changes what makes them, and uploads them as the
+`docs-screens` artifact: unzip it over `docs/assets/screens/` and commit.
 
 A closed session's page has **Delete**, which asks first, naming the
 session's track, car and date. A deleted session is left out of the list and

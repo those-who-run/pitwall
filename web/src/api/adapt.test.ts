@@ -28,6 +28,7 @@ import traceExample from "./gen/examples/get_trace_response.json?raw";
 import lapsExample from "./gen/examples/list_laps_response.json?raw";
 import listExample from "./gen/examples/list_sessions_response.json?raw";
 import { engineJson, lapJson, sessionJson, toConnect, traceJson, v1Url } from "./testing";
+import trace1500Json from "../../../tests/fixtures/trace-1500.json?raw";
 
 describe("the adapter", () => {
   it.each(Object.entries(SESSIONS))("maps the %s session both ways", (_, s) => {
@@ -169,6 +170,36 @@ describe("the adapter on contracts' examples", () => {
       },
     });
     expect(adapt.engineStatus((JSON.parse(offlineExample) as GetEngineStatusResponseJson).status)).toBeNull();
+  });
+});
+
+// those-who-run/paddock#121 AC3 (moved to #130): a trace of 1500 points, as the
+// pit wall's Go API encoded it (internal/api's TestATraceOf1500PointsGoesToTypeScript
+// writes the file and checks it is still the API's answer), decodes here to the
+// channels lap compare reads, every point as Go sent it.
+describe("a 1500-point trace from the Go API", () => {
+  const { trace } = JSON.parse(trace1500Json) as GetTraceResponseJson;
+  const t = adapt.trace(trace, "s", 0);
+
+  it("has 1500 points in every channel", () => {
+    expect(t.session_id).toBe("01JB9QZ4V3X8M2K7T5R1N6PDWA");
+    expect(t.lap).toBe(5);
+    for (const channel of [t.t, t.speed_kph, t.throttle_pct, t.brake_pct, t.gear, t.rpm, t.x, t.z]) {
+      expect(channel).toHaveLength(1500);
+    }
+  });
+
+  it("has every point the Go side made, bit for bit, and its NaN as NaN", () => {
+    for (let i = 0; i < 1500; i++) {
+      expect(t.t[i]).toBe(i / 60);
+      expect(t.speed_kph[i]).toBe(100 + (i % 97) * 0.5);
+      expect(t.throttle_pct[i]).toBe((i * 7) % 101);
+      expect(t.brake_pct[i]).toBe(i % 13 === 0 ? 50.5 : 0);
+      expect(t.gear[i]).toBe(1 + (i % 6));
+      expect(t.rpm[i]).toBe(i === 7 ? Number.NaN : 3000 + i * 3.25);
+      expect(t.x[i]).toBe(i * 0.1 - 50);
+      expect(t.z[i]).toBe(-i * 0.2);
+    }
   });
 });
 

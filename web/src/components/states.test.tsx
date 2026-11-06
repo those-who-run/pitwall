@@ -82,7 +82,7 @@ describe("ErrorState", () => {
     render(<ErrorState title="Couldn't read the session store." detail="503 the index is busy" />);
     const alert = screen.getByRole("alert");
     expect(alert.textContent).toContain("Couldn't read the session store.");
-    expect(alert.textContent).toContain("Retry, or check the engineer's logs.");
+    expect(alert.textContent).toContain("Retry, or check the pit wall's logs.");
     const details = alert.querySelector("details")!;
     expect(details.open).toBe(false);
     await user.click(screen.getByText("Details"));

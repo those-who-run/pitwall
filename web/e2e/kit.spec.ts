@@ -162,7 +162,7 @@ test("a lap flag explains itself by tap and by Enter, and closes with Escape (AC
     await pit.click();
   }
   await expect(explanation).toBeVisible();
-  await expect(explanation).toContainText("Fuel went up during the lap");
+  await expect(explanation).toContainText("The car came into the pits on this lap");
   await page.keyboard.press("Escape");
   await expect(explanation).toBeHidden();
 

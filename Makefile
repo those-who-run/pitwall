@@ -42,6 +42,7 @@ help:
 	@echo "web-dev   - Vite's dev server on http://localhost:5173, the API proxied to PITWALL_URL"
 	@echo "web-deps  - install web/node_modules from web/package-lock.json (npm ci)"
 	@echo "web-e2e   - Playwright over the built app, the Go API, NATS and logbook (needs Go, Docker and Chromium; CI's e2e job)"
+	@echo "docs-screenshots - the guide's screenshots into docs/assets/screens/, as web-e2e runs (CI's docs-screenshots workflow)"
 
 # go.yml's order: gofmt, tidy, vet, golangci-lint, the tests, build, govulncheck.
 .PHONY: check
@@ -182,3 +183,12 @@ web-check: web-node $(WEB_DEPS)
 .PHONY: web-e2e
 web-e2e: web-build
 	cd web && npm run e2e
+
+# The guide's screenshots (docs/pitwall.md; those-who-run/paddock#135): the docs
+# config, web/playwright.docs.config.ts, over the same set-up as web-e2e, at the
+# phone and desktop sizes, into docs/assets/screens/<viewport>/<page>.png. Needs
+# what web-e2e needs. Not part of make check: CI's docs-screenshots workflow runs
+# it and uploads the pictures, for someone to commit.
+.PHONY: docs-screenshots
+docs-screenshots: web-build
+	cd web && npx playwright test -c playwright.docs.config.ts

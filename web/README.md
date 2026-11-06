@@ -2,11 +2,14 @@
 
 For anyone working on the React pit wall in `web/`: its stack, the rules the build enforces, Node, and the commands. What a driver sees is in [the pit wall guide](../docs/pitwall.md).
 
-`web/` is the React pit wall (ADR 0003): Vite,
+`web/` is the React pit wall (v1's
+[ADR 0003](https://github.com/those-who-run/those-who-run/blob/v1.0.0/docs/adr/0003-ui-stack.md),
+kept by paddock's [v1 records](https://github.com/those-who-run/paddock/blob/main/docs/adr/README.md#v1s-records)): Vite,
 React and TypeScript (strict), Tailwind, Radix through shadcn/ui components in
 `web/src/components/ui/`, TanStack Query, and React Router in data mode. It
-builds to static files in `web/dist`, which v1's `those-who-run pitwall --static
-web/dist` served (v2's server is those-who-run/paddock#124): the session list, the session page
+builds to static files in `web/dist`, which the Go server, `cmd/pitwall`, serves
+from `TWR_PITWALL_STATIC_DIR` beside the API on one origin
+([Running it](../docs/pitwall.md#running-it)): the session list, the session page
 and lap compare ([the pit wall guide](../docs/pitwall.md)); a results card's old `/?session=<id>`
 link lands on `/sessions/<id>`.
 
@@ -15,7 +18,7 @@ link lands on `/sessions/<id>`.
   `web/`; those-who-run/paddock#127), and the TanStack Query hooks in
   `web/src/api/hooks.ts`. ESLint fails `fetch` or
   the client anywhere outside `web/src/api/`.
-- **Style comes only from the design tokens** (ADR 0004,
+- **Style comes only from the design tokens** (v1's ADR 0004,
   [`docs/design.md`](../docs/design.md)) in `web/src/styles/`: ESLint fails a
   colour literal or an arbitrary Tailwind value anywhere else in `web/src/`, a
   Vitest test checks every allowed colour pair's contrast, and the brand
@@ -46,8 +49,16 @@ package with the npm that ships with that Node.
 
 ```sh
 make web-build       # web/dist
-make web-dev         # Vite on http://localhost:5173, /api proxied to a local pitwall on 9852
+make web-dev         # Vite on http://localhost:5173, the API and /healthz proxied to PITWALL_URL
 make web-check       # ESLint, tsc, client freshness, Vitest, the build, bundle budget
 ```
 
-**On the phone and iPad** v1 had `make web-preview` ([the preview](../docs/pitwall.md#the-preview-on-the-phone-and-ipad)); it comes back with v2's server.
+`make web-dev` proxies `/twr.pitwall.v1.PitwallService` and `/healthz` to
+`PITWALL_URL`, `http://127.0.0.1:9852` by default: the pit wall paddock's
+compose stack runs (`make pitwall` in paddock). For one run from this checkout,
+set it to that one's address, such as
+`PITWALL_URL=http://127.0.0.1:8081 make web-dev`.
+
+**On the phone and iPad:** v1's `make web-preview` has no v2 counterpart;
+[the pit wall guide](../docs/pitwall.md#on-the-phone-and-ipad) says what to do
+instead.

@@ -5,7 +5,8 @@ import react from "@vitejs/plugin-react";
 import { searchForWorkspaceRoot } from "vite";
 import { defineConfig } from "vitest/config";
 
-// `make web-dev` runs `those-who-run pitwall` on this port and Vite in front of it.
+// `make web-dev` puts Vite in front of a running pit wall: PITWALL_URL, by default
+// the one paddock's compose stack publishes on v1's port (`make pitwall` there).
 const pitwall = process.env.PITWALL_URL ?? "http://127.0.0.1:9852";
 
 export default defineConfig({

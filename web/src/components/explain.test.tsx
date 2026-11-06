@@ -22,7 +22,7 @@ afterEach(cleanup);
 
 describe("LapFlag", () => {
   it.each([
-    ["pit", "Pit", "Pit lap", /Fuel went up/],
+    ["pit", "Pit", "Pit lap", /came into the pits on this lap/],
     ["out", "Out", "Out lap", /after a pit stop/],
     ["partial", "Partial", "Partial lap", /session ended in/],
     ["restart", "Restart", "Engineer restarted", /engineer restarted/],

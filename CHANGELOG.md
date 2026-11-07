@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/those-who-run/pitwall/compare/v0.1.2...v0.1.3) (2026-11-07)
+
+
+### Bug Fixes
+
+* **web:** the pit flag and the error hints say v2's words, not v1's ([#28](https://github.com/those-who-run/pitwall/issues/28)) ([e9eabfd](https://github.com/those-who-run/pitwall/commit/e9eabfdb9d5bf0e5c1097dc4d11a79dfde6e32c7))
+
 ## [0.1.2](https://github.com/those-who-run/pitwall/compare/v0.1.1...v0.1.2) (2026-11-01)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/those-who-run/pitwall/compare/v0.1.3...v0.1.4) (2026-11-12)
+
+
+### Dependencies
+
+* Go 1.27.4 ([#35](https://github.com/those-who-run/pitwall/issues/35)) ([a79a5b5](https://github.com/those-who-run/pitwall/commit/a79a5b5d86f91d74cfd7d6495b4da6f84c8c734b))
+
 ## [0.1.3](https://github.com/those-who-run/pitwall/compare/v0.1.2...v0.1.3) (2026-11-07)
 
 

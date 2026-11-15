@@ -30,5 +30,6 @@ the test reads.
 | `connectrpc.com/connect/v2` | The Connect runtime the generated `PitwallService` code needs, and `connecthttp` to serve it over `net/http` with GET, ETags and gzip (paddock#124). v2, as contracts generates it (contracts#41). |
 | `github.com/google/go-cmp` | Tests only: `protocmp`'s diffs of the API's answers against contracts' examples. |
 | `github.com/nats-io/nats.go` | NATS: the requests to logbook's micro endpoints (`svc.logbook.*`) and the watch on the `live` KV bucket for the engineer's status (paddock#125), as in every v2 component. |
+| `github.com/prometheus/client_golang` | `/metrics` and the series behind it (paddock#126): the official Prometheus client for Go, from the `prometheus` organisation, as the maintainer chose on 2026-11-14 (no other Go component had a metrics library to follow). |
 | `github.com/those-who-run/contracts` | The project's contracts: `twr.pitwall.v1` (the API), `twr.store.v1` (logbook's answers) and `twr.state.v1` (the live values), and their generated Go. |
 | `google.golang.org/protobuf` | protobuf's JSON form, which logbook's answers and the live values travel in (ADR 0002), and the messages themselves. |

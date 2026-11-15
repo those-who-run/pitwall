@@ -85,7 +85,7 @@ deploy is never hidden behind a stale cache.
 `pitwall` (`cmd/pitwall`) is v2's pit wall server, in Go (those-who-run/paddock#124).
 It holds no data and mounts no volume: the sessions come from `logbook`, over
 NATS, and the engineer's status from the `live` KV bucket. One origin serves
-the API, `/healthz` and the built web app (`make web-build`, which needs Node;
+the API, `/healthz`, `/metrics` and the built web app (`make web-build`, which needs Node;
 see [the web app's guide](../web/README.md)):
 
 ```sh
@@ -152,7 +152,21 @@ browser's cache works. Its two writes, `DeleteSession` and `RestoreSession`
 | `RestoreSession` (POST) | Brings a deleted session back | none |
 | `GET /healthz` (plain HTTP) | `ok`, `version`, and whether `nats` and `logbook` answered | `GET /healthz` |
 
-There is no `/metrics` yet: those-who-run/paddock#126 adds it.
+| `GET /metrics` (plain HTTP) | Prometheus's text format: the series below, and Go's runtime and process metrics | none |
+
+### Metrics
+
+`GET /metrics` is read only, takes no token and is answered ahead of the web app's
+fallback, never with `index.html`. A scrape isn't counted in its own series.
+Scraping and dashboards are the deployment's. No label holds a session id, a lap
+number or a path.
+
+| Series | Labels | What it says |
+| --- | --- | --- |
+| `pitwall_http_request_seconds` (histogram) | `route`, `method` | How long a request took. `route` is the Connect procedure (`/twr.pitwall.v1.PitwallService/GetTrace`), `static` for the web app's files, `other` for the rest, `/healthz` among them. |
+| `pitwall_http_requests_total` | `route`, `method`, `status` | Requests answered. The ETag's saving is `status="304"` over the same route's total. |
+| `pitwall_trace_bytes`, `pitwall_trace_points` | none | The size and points of each `GetTrace` answer that was a 200, with the body measured in protobuf's form before compression. |
+| `pitwall_upstream_errors_total` | `upstream`, `reason` | Failures reaching `logbook` or `nats`. `reason` is `timeout`, `unavailable` or `other`. No subscriber on `logbook`'s subject, or its 503, is `logbook` `unavailable`; no answer in time is `logbook` `timeout`; the pit wall's own NATS connection being down is `nats` `unavailable`. `logbook`'s 400, 404 and 409 are answered as they are and not counted. |
 
 - **From `logbook`.** Each data method asks `logbook`'s micro endpoints
   (`svc.logbook.*`, `twr.store.v1`) for the sources in `TWR_PITWALL_SRC`, and

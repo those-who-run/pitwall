@@ -39,6 +39,9 @@ The ones every Go component shares, from the
   with key-value pairs.
 - **A health endpoint**, `GET /healthz`, which answers 200 while the process can
   serve.
+- **Prometheus metrics**, `GET /metrics`: request latency and counts by route,
+  method and status, trace sizes and failures reaching `logbook` and NATS
+  ([`docs/pitwall.md`](docs/pitwall.md#metrics)).
 
 ## From the template
 

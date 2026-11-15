@@ -19,6 +19,9 @@ import (
 	pitwallv1 "github.com/those-who-run/contracts/gen/go/twr/pitwall/v1"
 	"github.com/those-who-run/contracts/gen/go/twr/pitwall/v1/pitwallv1connect"
 	storev1 "github.com/those-who-run/contracts/gen/go/twr/store/v1"
+	"google.golang.org/protobuf/proto"
+
+	"github.com/those-who-run/pitwall/internal/metrics"
 )
 
 // pageLimit is how many sessions the pit wall asks logbook for at a time: the
@@ -49,23 +52,37 @@ type Server struct {
 	// pit wall's version and the sources it shows, sorted.
 	etagScope string
 	engine    Engine
+	metrics   *metrics.Metrics
+}
+
+// Option changes how New builds the server.
+type Option func(*Server)
+
+// WithMetrics has the server count its failures reaching logbook and observe the
+// size of its trace answers in m.
+func WithMetrics(m *metrics.Metrics) Option {
+	return func(s *Server) { s.metrics, s.store.metrics = m, m }
 }
 
 // New is the service over logbook, reached through nc, for the sources in
 // sources (TWR_PITWALL_SRC). version is the pit wall's, in every ETag, so a new
 // pit wall never answers 304 for an old one's body. timeout is how long logbook
 // has to answer; 0 is StoreTimeout.
-func New(nc Requester, sources []string, version string, engine Engine, timeout time.Duration) *Server {
+func New(nc Requester, sources []string, version string, engine Engine, timeout time.Duration, opts ...Option) *Server {
 	if timeout <= 0 {
 		timeout = StoreTimeout
 	}
-	return &Server{
+	s := &Server{
 		store:     store{nc: nc, timeout: timeout},
 		sources:   sources,
 		version:   version,
 		etagScope: etagScope(version, sources),
 		engine:    engine,
 	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
 }
 
 // etagScope is the pit wall's version and its sources, sorted, so a pit wall
@@ -266,7 +283,9 @@ func (s *Server) GetTrace(ctx context.Context, req *pitwallv1.GetTraceRequest) (
 	if err := v.answer(resp.GetDataVersion(), resp.GetUnchanged()); err != nil {
 		return nil, err
 	}
-	return &pitwallv1.GetTraceResponse{Trace: Trace(resp.GetTrace())}, nil
+	answer := &pitwallv1.GetTraceResponse{Trace: Trace(resp.GetTrace())}
+	s.metrics.TraceAnswered(proto.Size(answer), len(answer.GetTrace().GetT()))
+	return answer, nil
 }
 
 // ListSameTrack is the other sessions at the session's track, read a page at a

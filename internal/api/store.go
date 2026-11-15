@@ -11,6 +11,8 @@ import (
 	"github.com/nats-io/nats.go"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/those-who-run/pitwall/internal/metrics"
 )
 
 // logbook's endpoints (contracts' subjects.yaml, services; paddock#122 and #123).
@@ -46,6 +48,7 @@ type Requester interface {
 type store struct {
 	nc      Requester
 	timeout time.Duration
+	metrics *metrics.Metrics
 }
 
 var (
@@ -73,12 +76,15 @@ func (s *store) call(ctx context.Context, subject string, req, resp proto.Messag
 			// The caller went away; there is no one to answer.
 			return connect.NewError(connect.CodeCanceled, "the request was cancelled")
 		}
+		s.metrics.UpstreamError(upstreamFailure(err))
 		return connect.Errorf(connect.CodeUnavailable, "logbook did not answer %s: %v", subject, err)
 	}
 	if code := reply.Header.Get(errorCodeHeader); code != "" {
+		s.countReply(code)
 		return storeError(subject, code, reply.Header.Get(errorHeader))
 	}
 	if err := unmarshal.Unmarshal(reply.Data, resp); err != nil {
+		s.metrics.UpstreamError(metrics.UpstreamLogbook, metrics.ReasonOther)
 		return connect.Errorf(connect.CodeInternal, "logbook's answer to %s: %v", subject, err)
 	}
 	return nil
@@ -98,4 +104,33 @@ func storeError(subject, code, text string) error {
 		return connect.NewError(connect.CodeUnavailable, text)
 	}
 	return connect.NewError(connect.CodeInternal, fmt.Sprintf("logbook failed %s (%s): %s", subject, code, text))
+}
+
+// upstreamFailure says which upstream a failed request to logbook was a failure
+// of, and why. NATS itself being down or closed is the pit wall's NATS failing;
+// nobody subscribed to logbook's subject is logbook unavailable; running out of
+// time is logbook's timeout, as NATS can't tell a slow logbook from a lost reply.
+func upstreamFailure(err error) (upstream, reason string) {
+	switch {
+	case errors.Is(err, nats.ErrNoResponders):
+		return metrics.UpstreamLogbook, metrics.ReasonUnavailable
+	case errors.Is(err, context.DeadlineExceeded), errors.Is(err, nats.ErrTimeout):
+		return metrics.UpstreamLogbook, metrics.ReasonTimeout
+	case errors.Is(err, nats.ErrConnectionClosed), errors.Is(err, nats.ErrDisconnected),
+		errors.Is(err, nats.ErrConnectionReconnecting), errors.Is(err, nats.ErrNoServers):
+		return metrics.UpstreamNATS, metrics.ReasonUnavailable
+	}
+	return metrics.UpstreamNATS, metrics.ReasonOther
+}
+
+// countReply counts logbook's error reply when it is logbook failing: its 400,
+// 404 and 409 are the caller's mistakes, answered as they are, not failures.
+func (s *store) countReply(code string) {
+	switch n, _ := strconv.Atoi(code); n {
+	case 400, 404, 409:
+	case 503:
+		s.metrics.UpstreamError(metrics.UpstreamLogbook, metrics.ReasonUnavailable)
+	default:
+		s.metrics.UpstreamError(metrics.UpstreamLogbook, metrics.ReasonOther)
+	}
 }

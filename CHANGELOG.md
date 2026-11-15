@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/those-who-run/pitwall/compare/v0.1.4...v0.1.5) (2026-11-15)
+
+
+### Features
+
+* **pitwall:** /metrics with latency by method, 304s, trace sizes and logbook errors ([#38](https://github.com/those-who-run/pitwall/issues/38)) ([96de29b](https://github.com/those-who-run/pitwall/commit/96de29bacf25b0864799c927492f9e6e6ac343c9))
+
 ## [0.1.4](https://github.com/those-who-run/pitwall/compare/v0.1.3...v0.1.4) (2026-11-12)
 
 

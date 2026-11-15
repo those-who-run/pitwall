@@ -225,7 +225,8 @@ test("pins the live session and follows its laps without a reload (AC4)", async 
   await expect(live).toContainText("Live");
   await expect(live).toContainText("Lap 2 of 6");
   await expect(live).toContainText("Position 3 of 16");
-  // Pinned above the days.
+  // Pinned above the days. The list comes from a separate call, so wait for it.
+  await expect(list(page)).toBeVisible();
   const above = await live.evaluate(
     (el) => !!(el.compareDocumentPosition(document.querySelector("[aria-label=Sessions]")!) & 4),
   );

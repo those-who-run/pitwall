@@ -20,6 +20,7 @@ import (
 
 	"github.com/those-who-run/pitwall/internal/api"
 	"github.com/those-who-run/pitwall/internal/engine"
+	"github.com/those-who-run/pitwall/internal/metrics"
 )
 
 // DefaultSources is TWR_PITWALL_SRC when unset: v2's own sessions and v1's
@@ -143,9 +144,11 @@ func Run(ctx context.Context, cfg Config, logger *slog.Logger, version string) e
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	go watcher.Run(ctx)
+	m := metrics.New()
 	deps := Deps{
 		Version:   version,
-		API:       api.New(nc, cfg.Sources, version, watcher, 0),
+		API:       api.New(nc, cfg.Sources, version, watcher, 0, api.WithMetrics(m)),
+		Metrics:   m,
 		StaticDir: cfg.StaticDir,
 		Health:    natsHealth{nc: nc},
 		Logger:    logger,

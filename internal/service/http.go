@@ -15,7 +15,10 @@ import (
 	"connectrpc.com/connect/v2/connecthttp"
 	"github.com/nats-io/nats.go"
 
+	"github.com/those-who-run/contracts/gen/go/twr/pitwall/v1/pitwallv1connect"
+
 	"github.com/those-who-run/pitwall/internal/api"
+	"github.com/those-who-run/pitwall/internal/metrics"
 )
 
 // The web app's caching (v1's server.py): Vite's hashed files under assets/ are
@@ -71,11 +74,16 @@ type Deps struct {
 	Health Health
 	// Logger takes the access log, at debug.
 	Logger *slog.Logger
+	// Metrics is what /metrics serves and the middleware records into. Give API
+	// the same one (api.WithMetrics) so its series are served too; nil makes
+	// Handler a Metrics of its own.
+	Metrics *metrics.Metrics
 }
 
 // Handler serves everything on one origin (paddock#124 R9): PitwallService over
 // Connect, with GET for every read, POST only for the two writes, and gzip over
-// gzipOver; GET /healthz; and the web app, from StaticDir, on every other path.
+// gzipOver; GET /healthz; GET /metrics in Prometheus's format (paddock#126),
+// read only, with no token and ahead of the web app's fallback; and the web app, from StaticDir, on every other path.
 // It answers no CORS preflight, and Connect takes only JSON or protobuf
 // bodies, so an ordinary cross-site page can't write (crosssite_test.go). A
 // DNS-rebinding page is same-origin to the browser and isn't stopped: ADR 0014
@@ -89,7 +97,45 @@ func Handler(d Deps) http.Handler {
 	if d.StaticDir != "" {
 		mux.Handle("/", static(d.StaticDir))
 	}
-	return accessLog(d.Logger, vary(mux))
+	m := d.Metrics
+	if m == nil {
+		m = metrics.New()
+	}
+	// /metrics is routed here, ahead of the "/" that falls back to index.html, and
+	// is not itself counted: a scrape is not the pit wall's traffic.
+	top := http.NewServeMux()
+	top.Handle("GET /metrics", m.Handler())
+	top.Handle("/", m.Middleware(routeOf(d.StaticDir != ""), vary(mux)))
+	return accessLog(d.Logger, top)
+}
+
+// procedures is every PitwallService procedure, the only paths that are a
+// route label of their own.
+var procedures = map[string]bool{
+	pitwallv1connect.PitwallServiceListSessionsProcedure:    true,
+	pitwallv1connect.PitwallServiceGetSessionProcedure:      true,
+	pitwallv1connect.PitwallServiceListLapsProcedure:        true,
+	pitwallv1connect.PitwallServiceGetTraceProcedure:        true,
+	pitwallv1connect.PitwallServiceListSameTrackProcedure:   true,
+	pitwallv1connect.PitwallServiceGetEngineStatusProcedure: true,
+	pitwallv1connect.PitwallServiceDeleteSessionProcedure:   true,
+	pitwallv1connect.PitwallServiceRestoreSessionProcedure:  true,
+}
+
+// routeOf is the route label of a request: its Connect procedure, "static" for
+// what the web app's handler answers, "other" for anything else. Only these
+// values exist, so a path never makes a label (paddock#126 R2).
+func routeOf(hasStatic bool) func(*http.Request) string {
+	return func(r *http.Request) string {
+		p := r.URL.Path
+		switch {
+		case procedures[p]:
+			return p
+		case hasStatic && p != "/healthz" && !strings.HasPrefix(p, "/twr."):
+			return metrics.RouteStatic
+		}
+		return metrics.RouteOther
+	}
 }
 
 // health is /healthz's body.
